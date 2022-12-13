@@ -10,6 +10,9 @@ import os
 import numpy as np
 import pandas as pd
 
+# import own functions
+from import_data import find_paths
+
 
 def import_string_data(
     file_path: str,
@@ -141,26 +144,48 @@ def remove_double_and_onlyNan_rows(
     
     return clean_df
 
-def find_onedrive_path():
-        
-    path = os.getcwd()
+
+def get_data(
+    sub: str, task, condition, side,
+    cam_pos,
+):
+    """
+    explanation of funcction
+
+    Arguments:
+        - sub: subject code as string
     
-    while os.path.dirname(path)[-5:] != 'Users':
-        path = os.path.dirname(path)
-    # path is now Users/username
-    onedrive_f = [
-        f for f in os.listdir(path) if np.logical_and(
-            'onedrive' in f.lower(),
-            'charit' in f.lower()
-        ) 
-    ]  # gives list
-    onedrivepath = os.path.join(path, onedrive_f[0])
+    Returns:
+        - df_out
     
-    data_path = os.path.join(
-        onedrivepath,
-        'Ultraleap-hand-tracking',  # adjust this so that it leads to ultraleap data folders
-        'data', 
-        'Patientdata'  # last should be 'Patientdata'
+    Raises:
+        - ValueErrors if campos or side are incorrect
+
+    """
+    if side.lower() not in ['left', 'right']:
+        raise ValueError('incorrect side variable')
+    
+    if cam_pos.lower() not in ['vr', 'desktop', 'st']:
+        raise ValueError('incorrect camera variable')
+    
+    # find path of defined data
+    pathfile = find_paths.find_raw_data_filepath(
+        sub=sub, cam_pos=cam_pos, task=task,
+        condition=condition, side=side,
     )
+
+    if len(pathfile) == 0: return
+
+    assert os.path.exists(pathfile), (
+        f'selected path does not exist {pathfile}')
+
+    # load selected file
+    data = import_string_data(pathfile)
+
+    # clean data
+    data = remove_double_and_onlyNan_rows(data)    
     
-    return data_path, onedrivepath
+    return data
+
+
+

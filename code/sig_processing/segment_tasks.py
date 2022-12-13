@@ -8,38 +8,61 @@ Most recent version prior to repo-deletion
 # Import public packages and fucntions
 import numpy as np
 import pandas as pd
+import datetime
 
-def task_segments(df,cutoff):
+import import_data.preprocessing_meta_info as meta_info
 
+
+def task_block_extraction(
+    df, sub, task, side, cond, cam
+):
     """
-    Function to convert UltraLeap-data
-    with incorrect commas and strings
-    in to DataFrame
+    Divides the cleaned data between two time points (can 
+    be used in cases where all task are in the same file).
 
-    Input:
-        - clean dataframe, cut-off of time 
-        differences
+    CHANGE FUNCTIONALITY FOR ONLY 1 BLOCK PRESENT
+        
+        Input:
+            - cleaned df (DataFrame),
+            time1: global_time of the start of a task, 
+            time2: global_time of the end of a task.
+        
+        Output:
+            - new dataframe for specific task/block.
+    """
+    # get block timestamps corresponding to data
+    blocktimes = meta_info.load_block_timestamps(
+        sub=sub, task=task, side=side,)
+    # # deal with Error:
+    # try:
+    #     # normal code
+    # except ValueError:
+    #     # code will only run when a valueError occurs
     
-    Returns:
-        - store_dfs: list w/ segmented tasks
-    """
+    if cam == 'desktop': cam = 'dt'
+    
+    run_row = blocktimes.loc[f'{cond.lower()}_{cam.lower()}']
 
-    i_start = 0
-    store_dfs = []
+    block_times = {}
+    for block in ['b1', 'b2']:
+        for time in ['start', 'end']:
+            t = run_row[f'{block}_{time}_ul']
+            # correct if timestamps is datetime
+            if type(t) == datetime.time: t = t.strftime("%H:%M:%S")
+            
+            block_times[f'{block}_{time}'] = t
 
-    for idx,dif in enumerate(np.diff(df['program_time'])):
-        if dif < cutoff:
-            continue
-        else:
-            i_end = idx
-            new_df = df.iloc[i_start:i_end].reset_index(drop=True)
-            store_dfs.append(new_df)
+    block1_df = df[
+        np.logical_and(
+            df['global_time'] >= block_times['b1_start'],
+            df['global_time'] <= block_times['b1_end']
+        )
+    ].reset_index(drop=True)
+    block2_df = df[
+        np.logical_and(
+            df['global_time'] >= block_times['b2_start'],
+            df['global_time'] <= block_times['b2_end']
+        )
+    ].reset_index(drop=True)
 
-            i_start = i_end+1
-
-    if np.diff(df['program_time'])[-1] < cutoff:
-        i_end = df.shape[0]
-        new_df = df.iloc[i_start:i_end].reset_index(drop=True)
-        store_dfs.append(new_df)
-
-    return store_dfs
+    return block1_df, block2_df

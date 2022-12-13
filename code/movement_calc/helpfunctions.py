@@ -5,272 +5,70 @@ import matplotlib.pyplot as plt
 from scipy.signal import find_peaks
 import operator
 
-"""
-Block Extraction
-"""
-
-def block_extraction(df, cutoff):
-
-    i_start = 0
-    store_dfs = []
-
-    for idx,dif in enumerate(np.diff(df['program_time'])):
-        if dif < cutoff:
-            continue
-        else:
-            i_end = idx
-            new_df = df.iloc[i_start:i_end].reset_index(drop=True)
-            store_dfs.append(new_df)
-
-            i_start = i_end+1
-
-    if np.diff(df['program_time'])[-1] < cutoff:
-        i_end = df.shape[0]
-        new_df = df.iloc[i_start:i_end].reset_index(drop=True)
-        store_dfs.append(new_df)
-
-    return store_dfs
-
-
 
 """
 Fingertapping Function
 """
 
-def FT_amp(
-    df, point1, point2
+def calc_distances(
+    xyz_data, point1, point2,
 ):
 
     """
-        Calculates the euclideian distance between 
-        two fingers.
-        
-        Input:
-            - cleaned df (DataFrame), 3D coordinates 
-            of the two fingers.
-        
-        Output:
-            - dataframe with the distance between 
-            fingers and time.
-    """
-
-    df_time = df[['program_time']].copy()
-
-    distances = []
-
-    for i in np.arange(0, df.shape[0]):
-
-        x1 = df.iloc[i][f'{point1}_x']
-        y1 = df.iloc[i][f'{point1}_y']
-        z1 = df.iloc[i][f'{point1}_z']
-        
-        x2 = df.iloc[i][f'{point2}_x']
-        y2 = df.iloc[i][f'{point2}_y']
-        z2 = df.iloc[i][f'{point2}_z']
-
-        pos1 = (x1, y1, z1)
-        pos2 = (x2, y2, z2)
-
-        distances.append(distance.euclidean(pos1, pos2))
-
-    df_time.insert(1, 'distance', distances)
-    df_time = df_time.reset_index(drop = True)
-
-    return df_time
-
-
-
-"""
-Opening-closing distance for each invividual finger
-"""
-
-def OC_amp(df, finger_ls):
-
-        """
-        Calculates the distance between each finger 
-        individually and palm.
-        
-        Input:
-            - cleaned df (DataFrame), finger list.
-        
-        Output:
-            - dataframe with finger-palm distances 
-            (columns have the finger's name)
-            and 'program_time'.
-        """
-        
-
-        distances = []
-        for finger in finger_ls: 
-            dist = []
-
-            for idx in np.arange(0, df.shape[0]):
-
-                x = df.iloc[idx][f'{finger}_x']
-                y = df.iloc[idx][f'{finger}_y']
-                z = df.iloc[idx][f'{finger}_z']
-
-                x_pal = df.iloc[idx]['palm_x']
-                y_pal = df.iloc[idx]['palm_y']
-                z_pal = df.iloc[idx]['palm_z']
-
-                fing = (x, y, z)
-                palm = (x_pal,y_pal,z_pal)
-
-                fing_pal = distance.euclidean(fing, palm)
-
-                dist.append(fing_pal)
-                
-            distances.append(dist)
-            
-        
-        key_ls = [f'{f}_dist' for f in finger_ls]
+    Calculates the euclideian distance between 
+    two fingers.
+    EXPLAIN LIST OPTION
     
-        # key_ls = ['program_time'] + key_ls
-
-        # df_amp_fing = pd.DataFrame(columns = key_ls)
-        # df_amp_fing.rename(columns = {finger_ls: key_ls}, inplace = True)
-        df_amp_fing = pd.DataFrame(
-            data = np.array(distances).T,
-            columns = key_ls,
-            )
-        
-        # if df_amp_fing.shape[1] >= 2: 
-        # print(df_amp_fing.index)
-
-        df_amp_fing.insert(0, 'program_time', df['program_time'].values)
-
-
-        # if len(df_amp_fing.keys()) == 2:
-        #     df_amp_fing.rename(columns = {finger_ls[0]:'distance'}, inplace = True)
-        #     # df_amp_fing.insert(0, 'program_time', df['program_time'])
-
-        return df_amp_fing
-
-
-
-"""
-Opening-Closing distance considering only 1 finger
-"""
-def OC_amp_fing(
-    df,
-    finger
-):
+    Input:
+        - cleaned df (DataFrame), 3D coordinates 
+        of the two fingers.
+    
+    Output:
+        - dataframe with the distance between 
+        fingers and time.
     """
-        Calculates the mean distance between 1 finger 
-        and palm.
-        
-        Input:
-            - cleaned df (DataFrame), finger name 
-            (str - ex: 'middle_tip').
-        
-        Output:
-            - dataframe with the finger-palm 
-            distance and 'program_time'.
-    """
-
-    df_time = df[['program_time']].copy()
-
     distances = []
 
-    for i in np.arange(0, df.shape[0]):
+    for i in np.arange(0, xyz_data.shape[0]):
+
+        if type(point1) == list:
             
-        # finger coordinates
-        xf = df.iloc[i][f'{finger}_x']
-        yf = df.iloc[i][f'{finger}_y']
-        zf = df.iloc[i][f'{finger}_z']
-        
+            i_dist = []
+            for p1 in point1:
 
-        # Palm coordinates
-        xp = df.iloc[i]['palm_x']
-        yp = df.iloc[i]['palm_y']
-        zp = df.iloc[i]['palm_z']
-
-        fing = (xf, yf, zf)
-        pal = (xp, yp, zp)
-        
-        fing_pal = distance.euclidean(fing, pal)
-
-        distances.append(fing_pal)
-
-    df_time.insert(1, 'distance', distances)
-    df_time = df_time.reset_index(drop = True)
-
-    return df_time
-
-
-
-"""
-Opening-Closing Amplitude - Mean Position of the 4 fingers
-"""
-def OC_amp_mean(
-    df,
-    index,
-    middle,
-    ring,
-    pinky
-):
-    """
-        Calculates the mean distance between pinky, 
-        ring, mid, index finger and palm.
-        
-        Input:
-            - cleaned df (DataFrame), finger names 
-            (str - ex: 'middle_tip').
-        
-        Output:
-            - dataframe with the mean fingers-palm 
-            distance and 'program_time'.
-    """
-
-    df_time = df[['program_time']].copy()
-
-    distances = []
-
-    for i in np.arange(0, df.shape[0]):
+                d = dist_2_points(xyz_data, p1, point2, i)
+                i_dist.append(d)
             
-        # Index coordinates
-        x1 = df.iloc[i][f'{index}_x']
-        y1 = df.iloc[i][f'{index}_y']
-        z1 = df.iloc[i][f'{index}_z']
+            dist = np.mean(i_dist)
         
-        # Middle coordinates
-        x2 = df.iloc[i][f'{middle}_x']
-        y2 = df.iloc[i][f'{middle}_y']
-        z2 = df.iloc[i][f'{middle}_z']
+        else:
 
-        # Ring coordinates
-        x3 = df.iloc[i][f'{ring}_x']
-        y3 = df.iloc[i][f'{ring}_y']
-        z3 = df.iloc[i][f'{ring}_z']
-
-        # Pinky coordinates
-        x4 = df.iloc[i][f'{pinky}_x']
-        y4 = df.iloc[i][f'{pinky}_y']
-        z4 = df.iloc[i][f'{pinky}_z']
-
-        # Palm coordinates
-        x5 = df.iloc[i][f'palm_x']
-        y5 = df.iloc[i][f'palm_y']
-        z5 = df.iloc[i][f'palm_z']
-
-        ind = (x1, y1, z1)
-        mid = (x2, y2, z2)
-        rin = (x3, y3, z3)
-        pin = (x4, y4, z4)
-        pal = (x5, y5, z5)
+            dist = dist_2_points(xyz_data, point1, point2, i)
         
-        ind_pal = distance.euclidean(ind, pal)
-        mid_pal = distance.euclidean(mid, pal)
-        rin_pal = distance.euclidean(rin, pal)
-        pin_pal = distance.euclidean(pin, pal)
+        distances.append(dist)
 
-        distances.append((ind_pal+mid_pal+rin_pal+pin_pal)/4)
 
-    df_time.insert(1, 'distance', distances)
-    df_time = df_time.reset_index(drop = True)
+    return distances
 
-    return df_time
+
+def dist_2_points(xyz_data, point1, point2, i):
+
+    x1 = xyz_data.iloc[i][f'{point1}_x']
+    y1 = xyz_data.iloc[i][f'{point1}_y']
+    z1 = xyz_data.iloc[i][f'{point1}_z']
+    
+    x2 = xyz_data.iloc[i][f'{point2}_x']
+    y2 = xyz_data.iloc[i][f'{point2}_y']
+    z2 = xyz_data.iloc[i][f'{point2}_z']
+
+    pos1 = (x1, y1, z1)
+    pos2 = (x2, y2, z2)
+
+    dist = distance.euclidean(pos1, pos2)
+
+    return dist
+
+
 
 
 """
@@ -350,76 +148,51 @@ def PS_ang(df, thumb, middle, palm):
 Finding minima and maxima
 """
 
-def find_min_max(
-    df_time_amp,
-    # distmax,
-    # distmin,
-    # hgt_min,
-    # hgt_max,
-    hgt,
-    # dist,
-    col_name: str,
-    prom,
-    # prom_min,
-    # prom_max,
-    # wid,
-    ):
-
-    """
-        Calculates the minima and maxima of a dataframe.
-        
-        Input:
-            - dataframe with time and distance values
-             (from a calculating distance/angle function),
-             height_max, height_min, str ('distance'/'angle')
-             of the dataframe's column name, prominence.
-        
-        Output:
-            - dictionary with max/min_idx, max/min_values.
+def find_min_max(distance_array, cam):
+    """"
+    ...
     """
 
-    inv_df_time_amp = -np.array(df_time_amp[col_name])
-    print(np.min(inv_df_time_amp))
 
-    # Adding a column with inverted distances to df_time_dist dataframe
-    if df_time_amp.shape[1] == 2:
-        df_time_amp.insert(2,'inv_distance', inv_df_time_amp)
+    if cam == 'vr':
+        
+        peaks_idx_max, _ = find_peaks(
+            distance_array, 
+            height=.03,  # not adding something for now
+            prominence = 0.01,  # prominence of 1 cm
+            wlen=30,  # prominence versus a window of 20 samples around the peak
+            distance=90 / 6,  # peaks are at least 1 / 6 seconds from each other
+        )
 
-    # Maxima
-    max_peaks = find_peaks(
-        df_time_amp[col_name],
-        # height = np.mean(df_time_amp[col_name]),
-        # height = hgt_max,
-        height = hgt,
-        # distance = dist,
-        # height = hgt,
-        # distance = distmax,
-        prominence = prom,
-        # prominence = prom_max,
-        # width = wid,
-        ) # distance = 15 -> assuming the patient needs 15 s to perform a tap
-    max_idx = max_peaks[0]
+        peaks_idx_min, _ = find_peaks(
+            -distance_array,
+            height=np.mean(-distance_array) - np.std(-distance_array),
+            distance=90 / 5,
+            prominence=.001, wlen=30,
+            )
 
-    max_values = max_peaks[1]['prominences']
+    elif cam == 'desktop' or cam == 'dt':
+        
+        peaks_idx_max, _ = find_peaks(
+            distance_array, 
+            height = np.mean(distance_array)-np.std(distance_array),
+            prominence = 0.02
+        )
 
-    # Minima
-    min_peaks = find_peaks(
-        inv_df_time_amp,
-        # height = np.mean(inv_df_time_amp),
-        # height = hgt_min,
-        height = -hgt,
-        # distance = dist,
-        # distance = distmin, 
-        prominence = prom,
-        # prominence = prom_min 
-        # width = wid
-        ) # distance = 15 -> assuming the patient needs 15 s to perform a tap
-    min_idx = min_peaks[0]
-    min_values = min_peaks[1]['prominences']
+        peaks_idx_min, _ = find_peaks(
+            -distance_array,
+            height = np.mean(-distance_array)-np.std(-distance_array), 
+            # (np.mean(-np.array(df2_dist_lh['distance']))+4*np.std(-np.array(df2_dist_lh['distance'])))), 
+            prominence = 0.02
+            )
+        
+    return peaks_idx_max, peaks_idx_min
 
-    dict_ind_values = {'max_idx': max_idx, 'max_values': max_values, 'min_idx': min_idx, 'min_values': min_values}
 
-    return dict_ind_values
+
+#### POTENTIALLY MAKE FUNCTION TO EXTRACT MINIMA IN BETWEEN MAXIMA
+# GET DISTANCE[max1 : max2]
+# GET INDEX OF LOWEST POINT (minimum) np.argmin(distance between maxima)
 
 
 
