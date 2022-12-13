@@ -1,0 +1,166 @@
+"""
+Importing Handtrack-Files from Ultraleap
+version data output 01.09.2022
+
+Most recent version prior to repo-deletion
+"""
+
+# Import public packages and fucntions
+import os
+import numpy as np
+import pandas as pd
+
+
+def import_string_data(
+    file_path: str,
+    removeNaNs: bool=True,
+):
+    """
+    Function to convert UltraLeap-data
+    with incorrect commas and strings
+    in to DataFrame
+
+    Input:
+        - file_path (str): directory and
+            name of data file
+        - removeNaNs: defines if double- and
+            nan-rows have to be deleted,
+            defaults to True
+    
+    Returns:
+        - df: pd DataFrame with correct data
+    """
+    # read in original data
+    dat = np.loadtxt(file_path, dtype=str)
+
+    # split keys to list
+    keys = dat[0]
+    keys = keys.split(',')
+
+    # remove key row from data
+    dat = dat[1:]
+
+    list_of_values = []
+
+    for row in np.arange(len(dat)):
+
+        # create value list per row
+
+        # split big string in pieces
+        datsplit = dat[row].split(',')
+
+        # take out single values global time and is pinching
+        glob_time = datsplit[0]
+        
+        # take pinching boolean value
+        try:
+            is_pinch = int(datsplit[-5])
+
+        # if is_pinching is missing (nan) bcs
+        # hand was not recorded
+        except ValueError:
+            
+            if datsplit[-5] == 'nan':
+
+                is_pinch = np.nan
+
+        # remove boolean values from rest
+        datsplit.pop(0)
+        datsplit.pop(-5)
+
+        # fill new list with floats
+        values = []
+
+        for i in np.arange(0, len(datsplit) - 1, 2):
+
+            # create float from two string parts
+            try:
+                values.append(
+                    float(f'{datsplit[i]}.{datsplit[i + 1]}')
+                )
+            
+            # add nan if no values are recorded
+            except ValueError:
+                
+                if np.logical_or(
+                    datsplit[i] == 'nan',
+                    datsplit[i + 1] == 'nan'
+                ):
+                    values.append(np.nan)
+
+        # insert single values in correct order to keys
+        values.insert(0, glob_time)
+        values.insert(-4, is_pinch)
+
+        list_of_values.append(values)
+    
+    # convert list of lists to DataFrame
+    df = pd.DataFrame(data=list_of_values, columns=keys)
+
+    if removeNaNs:
+        df = remove_double_and_onlyNan_rows(df)
+
+    return df
+
+
+
+def remove_double_and_onlyNan_rows(
+    df
+):
+    """
+    Removes every row which contains only
+    NaN values, or which is identical to the
+    previous row.
+    
+    Input:
+        - df (DataFrame): dataframe which needs
+        to be cleaned.
+    
+    Output:
+        - cleaned_df (DataFrame): df without rows
+        which are only-nan, or double
+    """
+    values = df.values  # use np-array for computational-speed
+    # create list to store selection
+    to_keep = [False]  # start with 1 bool because of range - 1 in for-loop
+    for i in np.arange(1, df.shape[0]):
+        # loop over every row
+        if np.isnan(list(values[i, 3:])).all():
+            # if all values are nan
+            to_keep.append(False)
+            continue
+        if (values[i, 3:] == values[i - 1, 3:]).all():
+            # if all values are identical
+            to_keep.append(False)
+        
+        else:
+            # keep row if not all-nan, or all-identical
+            to_keep.append(True)
+    # create new dataframe with rows-to-keep
+    clean_df = df[to_keep].reset_index(drop=True)
+    
+    return clean_df
+
+def find_onedrive_path():
+        
+    path = os.getcwd()
+    
+    while os.path.dirname(path)[-5:] != 'Users':
+        path = os.path.dirname(path)
+    # path is now Users/username
+    onedrive_f = [
+        f for f in os.listdir(path) if np.logical_and(
+            'onedrive' in f.lower(),
+            'charit' in f.lower()
+        ) 
+    ]  # gives list
+    onedrivepath = os.path.join(path, onedrive_f[0])
+    
+    data_path = os.path.join(
+        onedrivepath,
+        'Ultraleap-hand-tracking',  # adjust this so that it leads to ultraleap data folders
+        'data', 
+        'Patientdata'  # last should be 'Patientdata'
+    )
+    
+    return data_path, onedrivepath
