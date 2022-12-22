@@ -39,22 +39,22 @@ def import_string_data(
 
     try:    
         # read in original data
-        dat1 = np.loadtxt(file_path, dtype=str)
+        dat = np.loadtxt(file_path, dtype=str)
 
         # split keys to list
-        keys = dat1[0]
+        keys = dat[0]
         keys = keys.split(',')
 
         # remove key row from data
-        dat1 = dat1[1:]
+        dat = dat[1:]
 
         list_of_values = []
-        for row in np.arange(len(dat1)):
+        for row in np.arange(len(dat)):
 
         # create value list per row
 
         # split big string in pieces
-            datsplit = dat1[row].split(',')
+            datsplit = dat[row].split(',')
 
         # take out single values global time and is pinching
             glob_time = datsplit[0]
