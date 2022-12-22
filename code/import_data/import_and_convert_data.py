@@ -33,72 +33,78 @@ def import_string_data(
     Returns:
         - df: pd DataFrame with correct data
     """
-    # read in original data
-    dat = np.loadtxt(file_path, dtype=str)
 
-    # split keys to list
-    keys = dat[0]
-    keys = keys.split(',')
+    try:
 
-    # remove key row from data
-    dat = dat[1:]
+        # read in original data
+        dat = np.loadtxt(file_path, dtype=str)
 
-    list_of_values = []
+        # split keys to list
+        keys = dat[0]
+        keys = keys.split(',')
 
-    for row in np.arange(len(dat)):
+        # remove key row from data
+        dat = dat[1:]
 
-        # create value list per row
+        list_of_values = []
 
-        # split big string in pieces
-        datsplit = dat[row].split(',')
+        for row in np.arange(len(dat)):
 
-        # take out single values global time and is pinching
-        glob_time = datsplit[0]
-        
-        # take pinching boolean value
-        try:
-            is_pinch = int(datsplit[-5])
+            # create value list per row
 
-        # if is_pinching is missing (nan) bcs
-        # hand was not recorded
-        except ValueError:
+            # split big string in pieces
+            datsplit = dat[row].split(',')
+
+            # take out single values global time and is pinching
+            glob_time = datsplit[0]
             
-            if datsplit[-5] == 'nan':
-
-                is_pinch = np.nan
-
-        # remove boolean values from rest
-        datsplit.pop(0)
-        datsplit.pop(-5)
-
-        # fill new list with floats
-        values = []
-
-        for i in np.arange(0, len(datsplit) - 1, 2):
-
-            # create float from two string parts
+            # take pinching boolean value
             try:
-                values.append(
-                    float(f'{datsplit[i]}.{datsplit[i + 1]}')
-                )
-            
-            # add nan if no values are recorded
+                is_pinch = int(datsplit[-5])
+
+            # if is_pinching is missing (nan) bcs
+            # hand was not recorded
             except ValueError:
                 
-                if np.logical_or(
-                    datsplit[i] == 'nan',
-                    datsplit[i + 1] == 'nan'
-                ):
-                    values.append(np.nan)
+                if datsplit[-5] == 'nan':
 
-        # insert single values in correct order to keys
-        values.insert(0, glob_time)
-        values.insert(-4, is_pinch)
+                    is_pinch = np.nan
 
-        list_of_values.append(values)
-    
-    # convert list of lists to DataFrame
-    df = pd.DataFrame(data=list_of_values, columns=keys)
+            # remove boolean values from rest
+            datsplit.pop(0)
+            datsplit.pop(-5)
+
+            # fill new list with floats
+            values = []
+
+            for i in np.arange(0, len(datsplit) - 1, 2):
+
+                # create float from two string parts
+                try:
+                    values.append(
+                        float(f'{datsplit[i]}.{datsplit[i + 1]}')
+                    )
+                
+                # add nan if no values are recorded
+                except ValueError:
+                    
+                    if np.logical_or(
+                        datsplit[i] == 'nan',
+                        datsplit[i + 1] == 'nan'
+                    ):
+                        values.append(np.nan)
+
+            # insert single values in correct order to keys
+            values.insert(0, glob_time)
+            values.insert(-4, is_pinch)
+
+            list_of_values.append(values)
+
+        # convert list of lists to DataFrame
+        df = pd.DataFrame(data=list_of_values, columns=keys)    
+        
+    except ValueError:
+        df = pd.read_csv(file_path)
 
     if removeNaNs:
         df = remove_double_and_onlyNan_rows(df)
@@ -174,17 +180,18 @@ def get_data(
         condition=condition, side=side,
     )
 
-    if len(pathfile) == 0: return
 
-    assert os.path.exists(pathfile), (
-        f'selected path does not exist {pathfile}')
+    if len(pathfile) == 0: 
+        assert os.path.exists(pathfile), (
+            f'selected path does not exist {pathfile}')
+        return ''
 
     # load selected file
     data = import_string_data(pathfile)
 
     # clean data
     data = remove_double_and_onlyNan_rows(data)    
-    
+
     return data
 
 

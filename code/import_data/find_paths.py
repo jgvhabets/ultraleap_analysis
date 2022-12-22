@@ -90,7 +90,6 @@ def find_raw_data_filepath(
         print(
             'No files available for combination: '
             f'{sub, cam_pos, task, condition, side}')
-    
         return ''
     
     sel_folder = os.path.join(cam_folder, sel_files[0])
