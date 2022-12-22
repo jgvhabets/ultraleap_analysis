@@ -14,14 +14,17 @@ import pandas as pd
 from import_data import find_paths
 
 
+
+
 def import_string_data(
     file_path: str,
     removeNaNs: bool=True,
 ):
     """
     Function to convert UltraLeap-data
-    with incorrect commas and strings
-    in to DataFrame
+    to DataFrame. If it comes with incorrect 
+    commas and strings, this will be 
+    corrected. 
 
     Input:
         - file_path (str): directory and
@@ -33,80 +36,83 @@ def import_string_data(
     Returns:
         - df: pd DataFrame with correct data
     """
-    # read in original data
-    dat = np.loadtxt(file_path, dtype=str)
 
-    # split keys to list
-    keys = dat[0]
-    keys = keys.split(',')
+    try:    
+        # read in original data
+        dat1 = np.loadtxt(file_path, dtype=str)
 
-    # remove key row from data
-    dat = dat[1:]
+        # split keys to list
+        keys = dat1[0]
+        keys = keys.split(',')
 
-    list_of_values = []
+        # remove key row from data
+        dat1 = dat1[1:]
 
-    for row in np.arange(len(dat)):
+        list_of_values = []
+        for row in np.arange(len(dat1)):
 
         # create value list per row
 
         # split big string in pieces
-        datsplit = dat[row].split(',')
+            datsplit = dat1[row].split(',')
 
         # take out single values global time and is pinching
-        glob_time = datsplit[0]
+            glob_time = datsplit[0]
         
         # take pinching boolean value
-        try:
-            is_pinch = int(datsplit[-5])
+            try:
+                is_pinch = int(datsplit[-5])
 
         # if is_pinching is missing (nan) bcs
         # hand was not recorded
-        except ValueError:
-            
-            if datsplit[-5] == 'nan':
+            except ValueError:
+        
+                if datsplit[-5] == 'nan':
 
-                is_pinch = np.nan
+                    is_pinch = np.nan
 
-        # remove boolean values from rest
-        datsplit.pop(0)
-        datsplit.pop(-5)
+    # remove boolean values from rest
+            datsplit.pop(0)
+            datsplit.pop(-5)
 
         # fill new list with floats
-        values = []
+            values = []
 
-        for i in np.arange(0, len(datsplit) - 1, 2):
+            for i in np.arange(0, len(datsplit) - 1, 2):
 
             # create float from two string parts
-            try:
-                values.append(
-                    float(f'{datsplit[i]}.{datsplit[i + 1]}')
-                )
+                try:
+                    values.append(
+                        float(f'{datsplit[i]}.{datsplit[i + 1]}')
+                    )
             
             # add nan if no values are recorded
-            except ValueError:
+                except ValueError:
                 
-                if np.logical_or(
-                    datsplit[i] == 'nan',
-                    datsplit[i + 1] == 'nan'
-                ):
-                    values.append(np.nan)
+                    if np.logical_or(
+                        datsplit[i] == 'nan',
+                        datsplit[i + 1] == 'nan'
+                    ):
+                        values.append(np.nan)
 
         # insert single values in correct order to keys
-        values.insert(0, glob_time)
-        values.insert(-4, is_pinch)
+            values.insert(0, glob_time)
+            values.insert(-4, is_pinch)
 
-        list_of_values.append(values)
+            list_of_values.append(values)
     
     # convert list of lists to DataFrame
-    df = pd.DataFrame(data=list_of_values, columns=keys)
+            df = pd.DataFrame(data=list_of_values, columns=keys)
 
-    if removeNaNs:
-        df = remove_double_and_onlyNan_rows(df)
+        if removeNaNs:
+            df = remove_double_and_onlyNan_rows(df)
+
+    except (ValueError, AssertionError):
+
+        df = pd.read_csv(file_path)
 
     return df
-
-
-
+    
 def remove_double_and_onlyNan_rows(
     df
 ):
