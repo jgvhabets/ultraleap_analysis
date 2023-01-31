@@ -102,12 +102,13 @@ def import_string_data(
 
         # convert list of lists to DataFrame
         df = pd.DataFrame(data=list_of_values, columns=keys)    
-        
-    except ValueError:
+
+    except (ValueError, AssertionError):
         df = pd.read_csv(file_path)
 
     if removeNaNs:
-        df = remove_double_and_onlyNan_rows(df)
+            df = remove_double_and_onlyNan_rows(df)
+    
 
     return df
 
@@ -141,6 +142,11 @@ def remove_double_and_onlyNan_rows(
         if (values[i, 3:] == values[i - 1, 3:]).all():
             # if all values are identical
             to_keep.append(False)
+
+        elif sum(values[i, 3:] == values[i - 1, 3:]) / len(values[i, 3:]) > .8:
+            # if xx% of values are identical
+            to_keep.append(False)
+
         
         else:
             # keep row if not all-nan, or all-identical
@@ -151,7 +157,7 @@ def remove_double_and_onlyNan_rows(
     return clean_df
 
 
-def get_data(
+def get_data(folder: str,
     sub: str, task, condition, side,
     cam_pos,
 ):
@@ -171,20 +177,21 @@ def get_data(
     if side.lower() not in ['left', 'right']:
         raise ValueError('incorrect side variable')
     
-    if cam_pos.lower() not in ['vr', 'desktop', 'st']:
+    if cam_pos.lower() not in ['vr', 'dt', 'st']:
         raise ValueError('incorrect camera variable')
     
     # find path of defined data
-    pathfile = find_paths.find_raw_data_filepath(
+    pathfile = find_paths.find_raw_data_filepath(folder=folder,
         sub=sub, cam_pos=cam_pos, task=task,
         condition=condition, side=side,
     )
 
 
-    if len(pathfile) == 0: 
-        assert os.path.exists(pathfile), (
-            f'selected path does not exist {pathfile}')
-        return ''
+    if len(pathfile) == 0: return
+    
+    assert os.path.exists(pathfile), (
+        f'selected path does not exist {pathfile}')
+    
 
     # load selected file
     data = import_string_data(pathfile)

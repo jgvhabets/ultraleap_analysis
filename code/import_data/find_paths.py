@@ -36,29 +36,34 @@ def find_onedrive_path(
             onedrivepath,
             'Ultraleap-hand-tracking',  # adjust this so that it leads to ultraleap data folders
             'data',
-            'Patientdata'
+            'patientdata'
         )
     
-    elif subfolder.lower() == 'self':
+    elif subfolder.lower() == 'control':
         onedrivepath = os.path.join(
             onedrivepath,
             'Ultraleap-hand-tracking',  # adjust this so that it leads to ultraleap data folders
             'data',
-            'self_recorded'
+            'control'
         )
     
     return onedrivepath
 
 
-def find_available_subs():
+def find_available_subs(folder):
 
-    subs = os.listdir(find_onedrive_path('patientdata'))
-    subs = [s for s in subs if s[:2].lower() == 'ul']
+    subs = os.listdir(find_onedrive_path(folder))
+
+    if folder == 'patientdata':
+        subs = [s for s in subs if s[:2].lower() == 'ul']
+    elif folder == 'control':
+        subs = [s for s in subs if s[:7].lower() == 'control']
 
     return subs
 
 
 def find_raw_data_filepath(
+    folder: str,
     sub: str, cam_pos: str, task: str,
     condition: str, side: str
 ):
@@ -74,10 +79,9 @@ def find_raw_data_filepath(
     )
     # assert cam_pos in []
 
-
     # find folder with defined data
-    if len(sub) == 3: sub = f'ul{sub}'
-    subpath = os.path.join(find_onedrive_path('patientdata'), sub)
+    # if len(sub) == 3: sub = f'ul{sub}'
+    subpath = os.path.join(find_onedrive_path(folder), sub)
 
     cam_folder = os.path.join(subpath, cam_pos.lower())
     
