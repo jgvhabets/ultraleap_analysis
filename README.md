@@ -12,6 +12,7 @@ CONDA ENVIRONMENT INSTALLATION COMMAND:
 
 Later installed:
 - openpyxl
+- traces
 
 
 
