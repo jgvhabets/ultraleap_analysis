@@ -117,11 +117,6 @@ def find_raw_data_filepath(
         'right',
     }, f'given side ({side}) should be "lh" or "rh"'
 
-    assert cam_pos in {
-        'desktop',
-        'screentop',
-    }, f'given side ({cam_pos}) should be "dt" or "st"'
-
     # find folder with defined data
     if len(sub) == 3: sub = f'ul{sub}'
     subpath = os.path.join(find_onedrive_path(folder), sub)
