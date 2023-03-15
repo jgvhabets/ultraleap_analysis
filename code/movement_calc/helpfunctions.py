@@ -5,58 +5,57 @@ import matplotlib.pyplot as plt
 from scipy.signal import find_peaks
 import operator
 
-
-"""
-Fingertapping Function
-"""
-
-def calc_distances(
-    xyz_data, point1, point2,
+def calc_fps(
+    df 
 ):
-
     """
-    Calculates the euclideian distance between 
-    two fingers.
-    EXPLAIN LIST OPTION
+    Calculates the sampling rate of a given data frame 
+
+    Input: 
+        - df: pandas Dataframe
+
+    Returns:
+        - sampling frequency (float)
+    """
+    time = list(df['program_time'])
+    dur = time[-1] - time[0]
+    return len(df) / dur
+
+
+def calc_distances(xyz_data, point1, point2):
+    """
+    Calculates the euclidean distance between two points.
+    This function returns a Dataframe with all the distances between point1 and point2.
     
     Input:
-        - cleaned df (DataFrame), 3D coordinates 
-        of the two fingers.
+        - xyz_data: cleaned df (DataFrame) which contains 3D coordinates of the two points.
+        - point1: a single point to calculate the distances from.
+        - point2: the second point for calculating the distances.
     
     Output:
-        - dataframe with the distance between 
-        fingers and time.
+        - Dataframe with the distances.
     """
+
     distances = []
+    key = f"{point1}_{point2}"
 
     for i in np.arange(0, xyz_data.shape[0]):
-
-        if type(point1) == list:
-            
-            i_dist = []
-            for p1 in point1:
-
-                d = dist_2_points(xyz_data, p1, point2, i)
-                i_dist.append(d)
-            
-            dist = np.mean(i_dist)
-        
-        else:
-
-            dist = dist_2_points(xyz_data, point1, point2, i)
-        
+        dist = dist_2_points(xyz_data, point1, point2, i)
         distances.append(dist)
 
+    return pd.DataFrame({key: distances})
 
-    return distances
 
-
-def dist_2_points(xyz_data, point1, point2, i):
+def dist_2_points(xyz_data,
+ point1, 
+ point2, 
+ i
+):
 
     x1 = xyz_data.iloc[i][f'{point1}_x']
     y1 = xyz_data.iloc[i][f'{point1}_y']
     z1 = xyz_data.iloc[i][f'{point1}_z']
-    
+
     x2 = xyz_data.iloc[i][f'{point2}_x']
     y2 = xyz_data.iloc[i][f'{point2}_y']
     z2 = xyz_data.iloc[i][f'{point2}_z']
@@ -64,43 +63,37 @@ def dist_2_points(xyz_data, point1, point2, i):
     pos1 = (x1, y1, z1)
     pos2 = (x2, y2, z2)
 
-    dist = distance.euclidean(pos1, pos2)
-
-    return dist
+    return distance.euclidean(pos1, pos2)
 
 
-
-
-"""
-Pronation-Supination Function
-"""
-
-def PS_ang(df, thumb, middle, palm):
-
+def calc_prosup_angle(df, 
+    thumb = str, 
+    middle = str, 
+    palm = str
+):
     """
-    Calculates the angle between the normal
-    vector (normal vector between mid-finger 
-    and thump) of the palm and the vertical 
-    axis of the ultraleap.
-    
-    Input:
-        - df (cleaned DataFrame), thumb, middle
-        finger and palm.
-    
-    Output:
-        - pro_sup_angle: list with PS angles 
-        in degrees.
-   """
+    This can be sued to calculate the roll angle of the palm from a pronation/supination movement.
 
-    df_time_ang = df[['program_time']].copy()
+    NEEDS REVISION!
+
+    Parameters:
+    df (pandas DataFrame): DataFrame containing the coordinates of (at least) the thumb, middle finger, and palm
+    thumb (str): Name of the thumb column in the df DataFrame (if possible, use the coordinates of the the fingertip)
+    middle (str): Name of the middlefinger column in the df DataFrame (if possible, use the coordinates of the the fingertip)
+    palm (str): Name of the palm column in the df DataFrame
+
+    Returns:
+    pandas DataFrame: Roll angles of the palm in degrees over time
+    """
+
     pro_sup_angle = []
 
-    for i in np.arange(0, df.shape[0]):
+    for i in range(df.shape[0]):
         # Thumb coordinates
         xt = df.iloc[i][f'{thumb}_x']
         yt = df.iloc[i][f'{thumb}_y']
         zt = df.iloc[i][f'{thumb}_z']
-        
+
         # Mid-finger coordinates
         xm = df.iloc[i][f'{middle}_x']
         ym = df.iloc[i][f'{middle}_y']
@@ -115,228 +108,159 @@ def PS_ang(df, thumb, middle, palm):
         m = (xm, ym, zm)
         p = (xp, yp, zp)
 
-        vector_t = tuple(map(operator.sub,t,p))
-        vector_m = tuple(map(operator.sub,m,p))
-        
-        #vert_axis_xyz = (xp, 1, zp)
-        #vector_vert_ax = tuple(map(operator.sub, vert_axis_xyz, p))
+        # Calculate vectors
+        vector_t = np.array(t) - np.array(p)
+        vector_m = np.array(m) - np.array(p)
 
-        cross_vector = np.cross(vector_t, vector_m)
-        vert_vector = (0, 1, 0)
-        #div = vector_vert_ax/cross
-       
-        # Normalization of cross_vector and vert_vector
-        unit_vect1 = cross_vector / np.linalg.norm(cross_vector)
-        unit_vect2 = vert_vector / np.linalg.norm(vert_vector)
+        # Calculate cross product and angle between vectors
+        cross = np.cross(vector_t, vector_m)
+        angle_rad = np.arctan2(np.linalg.norm(cross), np.dot(vector_t, vector_m))
 
-        dotprod = np.dot(unit_vect1, unit_vect2)
-        # div = unit_vect1/unit_vect2
-        # div = vert_vector/cross_vector
-    
-        pro_sup_angle.append(np.arccos(dotprod)*(180/np.pi))
-        # pro_sup_angle.append(np.arccos(div)*(180/np.pi))
-        # print(pro_sup_angle)
-        #print(pro_sup_angle)
-    df_time_ang.insert(1, 'angle', pro_sup_angle)
-    df_time_ang = df_time_ang.reset_index(drop = True)
-    # print(df_time_ang)
-    return df_time_ang
+        # Convert angle to degrees
+        angle_deg = np.rad2deg(angle_rad)
+
+        # Determine the sign of the angle based on the direction of rotation
+        if vector_t[1] > 0:
+            angle_deg *= -1
+
+        pro_sup_angle.append(angle_deg)
+
+    # Create dataframe with time and pronation/supination angles
+    dist = pd.DataFrame()
+    dist['roll_angle'] = pro_sup_angle
+
+    return dist
 
 
+def find_min_max(
+    dist_dataframe
+):
+    '''
+    Function to calculate the indexes of the maximum values 
+    in a movement trace. Then the index of a local minimum between 
+    two maxima is calculated 
 
-"""
-Finding minima and maxima
-"""
+    NEEDS REVISION! Check for different moevemt profiles!
 
-def find_min_max(distance_array, cam):
-    """"
-    ...
-    """
+    Input:
+        - dist_dataframe: dataframe with values for distance betwenn two points over time
 
+    Output:
+        - Arrays for the maximum indexes and the minimum indexes seperately 
 
-    if cam == 'vr':
-        
-        peaks_idx_max, _ = find_peaks(
-            distance_array, 
-            height=.03,  # not adding something for now
-            prominence = 0.01,  # prominence of 1 cm
-            wlen=30,  # prominence versus a window of 20 samples around the peak
-            distance=90 / 6,  # peaks are at least 1 / 6 seconds from each other
-        )
+    '''
 
-        peaks_idx_min, _ = find_peaks(
-            -distance_array,
-            height=np.mean(-distance_array) - np.std(-distance_array),
-            distance=90 / 5,
-            prominence=.001, wlen=30,
-            )
+    dist_array = np.array(dist_dataframe.iloc[:,0])
+    peaks_idx_max, _ = find_peaks(
+        dist_array, 
+        height = np.mean(dist_array)-np.std(dist_array),
+        prominence = 0.02,
+    )
 
-    elif cam == 'desktop' or cam == 'dt':
-        
-        peaks_idx_max, _ = find_peaks(
-            distance_array, 
-            height = np.mean(distance_array)-np.std(distance_array),
-            prominence = 0.02
-        )
-
-        peaks_idx_min, _ = find_peaks(
-            -distance_array,
-            height = np.mean(-distance_array)-np.std(-distance_array), 
-            # (np.mean(-np.array(df2_dist_lh['distance']))+4*np.std(-np.array(df2_dist_lh['distance'])))), 
-            prominence = 0.02
-            )
+    peaks_idx_min = np.array([np.where(dist_dataframe.iloc[:,0] == np.array(dist_dataframe.iloc[peaks_idx_max[i]:peaks_idx_max[i+1]]).min())[0][0]
+        for i in np.arange(0, len(peaks_idx_max[:-1]))
+    ])
         
     return peaks_idx_max, peaks_idx_min
 
 
+'''
+BELOW NEEDS REVISION AND IS INCLUDED IN ANOTHER PY.FILE 
+'''
+# def find_zeroPasses(
+#     signal
+# ):
+#     """
+#     Finding slope changes / zeros (?)
+#     """
 
-#### POTENTIALLY MAKE FUNCTION TO EXTRACT MINIMA IN BETWEEN MAXIMA
-# GET DISTANCE[max1 : max2]
-# GET INDEX OF LOWEST POINT (minimum) np.argmin(distance between maxima)
+#     zeropasses = []
+#     for i in np.arange(len(signal) - 1):
 
-
-
-
-"""
-Finding slope changes / zeros (?)
-"""
-
-def find_zeroPasses(signal):
-
-    zeropasses = []
-    for i in np.arange(len(signal) - 1):
-
-        prod = signal[i] * signal[i + 1]
+#         prod = signal[i] * signal[i + 1]
         
-        if prod <= 0:
+#         if prod <= 0:
 
-            zeropasses.append(i)
+#             zeropasses.append(i)
     
-    return zeropasses
+#     return zeropasses
 
 
 
-"""
-Speed Function w/ time slicing for the whole movement
-"""
 
-def speed_over_time(df_dist_time, k):
 
-    """
-        Calculates the speed of movements.
+# def extract_tap_features(
+#     distance_over_time, min_idx,
+# ):
+#     """
+#     Calculates features -> explain more! 
+#     """
+    
+#     # block_feature_dict= {}
+#     block_feature_list= [] # list to collect features
+#     # tap_feature_list =[]
+
+#     # lists to store features per tap
+#     max_vel_pertap = []
+#     mean_vel_pertap = []
+#     sd_vel_pertap = []
+#     max_amp_pertap = []
+#     sd_amp_pertap = []
+#     rms_pertap = []
+
+
+#     for i in np.arange(0, len(min_idx[:-1])):
+
+#         #calculating featrues per tap
+#         # min_time1 = distance_over_time.iloc[min_idx[i]]['program_time']
+#         # min_time2 = distance_over_time.iloc[min_idx[i+1]]['program_time']
+
+#         # tap_duration = min_time2 - min_time1
+
+#         tap_distances = np.array(distance_over_time.iloc[min_idx[i]:min_idx[i+1]]['distance'])
+#         tap_durations = np.array(distance_over_time.iloc[min_idx[i]:min_idx[i+1]]['program_time'])
         
-        Input:
-            - dataframe with time and distance values
-             (from calc_amp_OC() function).
+#         df_dist = np.diff(tap_distances)
+#         df_time = np.diff(tap_durations)
         
-        Output:
-            - speed (list).
-    """
+#         speed_during_tap = abs(df_dist) / df_time
 
-    speed = []
-    
-    for i in np.arange(0, df_dist_time.shape[0] - k, k): 
-        dist1 = df_dist_time.iloc[i]['distance']
-        dist2 = df_dist_time.iloc[i + k]['distance']
+#         if any([v == np.inf for v in speed_during_tap]) or np.isnan(speed_during_tap).any():
+                
+#             bad_sel = np.array([v == np.inf for v in speed_during_tap]) + np.isnan(speed_during_tap)
 
-        time1 = df_dist_time.iloc[i]['program_time']
-        time2 = df_dist_time.iloc[i + k]['program_time']
+#             speed_during_tap = speed_during_tap[~bad_sel]
+
+
+#         max_vel_pertap.append(np.nanmax((speed_during_tap)))
+#         mean_vel_pertap.append(np.nanmean((speed_during_tap)))
+#         sd_vel_pertap.append(np.nanstd((speed_during_tap)))
         
-        delta_dist = dist2-dist1
-        delta_time = time2-time1
+#         max_amp_pertap.append(np.nanmax(tap_distances))
+#         sd_amp_pertap.append(np.nanstd(tap_distances))
 
-        vel = delta_dist/delta_time
+#         rms_pertap.append(np.sqrt(np.nanmean(tap_distances**2)))
+#         rms_normed_pertap = (np.sqrt(np.nanmean(tap_distances**2))) / tap_durations
 
-        speed.append(abs(vel))
+#         # tap_fefature_list.append([mean_vel_pertap, max_vel_pertap, rms_pertap, sd_vel_pertap, max_amp_pertap, sd_amp_pertap, rms_pertap, rms_normed_pertap])
 
-    # dict_speed = {'speed': speed}
-    # df_speed = pd.DataFrame(dict_speed)
-    
-    return speed
+#     #calculating features per block using the input from each tap
+#     max_vel_blk = np.nanmean(max_vel_pertap)
+#     mean_vel_blk = np.nanmean(mean_vel_pertap)
+#     sd_vl_blk = np.nanstd(max_vel_pertap)
+#     mean_maxamp_blk = np.nanmean(max_amp_pertap)
+#     sd_maxamp_blk = np.nanstd(max_amp_pertap)
+#     mean_rms_blk = np.nanmean(rms_pertap)
+#     sd_rms_blk = np.nanstd(rms_pertap)
+#     nrms_blk = np.nanmean(rms_normed_pertap)
 
+#     # block_feature_dict = {'max_velocity_block': max_vel_blk,
+#     #                     'mean_velocity_block': mean_vel_blk, 
+#     #                     'sd_velocity_block' :sd_vl_blk, 
+#     #                     'mean_maxamplitude_block': mean_maxamp_blk, 
+#     #                     'mean_maxamplitude_block': sd_maxamp_blk, 
+#     #                     'mean_rms_block': mean_rms_blk}
 
-"""
-Speed of opening and closing
-"""
+#     block_feature_list.append([max_vel_blk, mean_vel_blk, sd_vl_blk, mean_maxamp_blk, sd_maxamp_blk, mean_rms_blk, sd_rms_blk, nrms_blk])
 
-def speed_OC_time_series(df_time_amp, max_idx, min_idx):
-
-    """
-        Calculates the speed of opening and closing over 
-        time series.
-        
-        Input:
-            - dataframe with time and dist values
-             (from OC_amp() function).
-        
-        Output:
-            - dict_speedOC: dictionary with speedO and speedC.
-    """
-    
-    speedO = []
-    speedC = []
-
-    for i, (max,min) in enumerate(zip(max_idx[:-1], min_idx)):
-
-        max_time = df_time_amp.iloc[max]['program_time']
-        max_amp = df_time_amp.iloc[max]['distance']
-        min_time = df_time_amp.iloc[min]['distance']
-        min_amp = df_time_amp.iloc[min]['inv_distance']
-        max_amp2 = df_time_amp.iloc[max_idx[i+1]]['distance']
-        max_time2 = df_time_amp.iloc[max_idx[i+1]]['program_time']
-    
-        speed_O_amp = max_amp2-min_amp
-        speed_O_time = max_time2-min_time
-
-        vel_O = speed_O_amp/speed_O_time
-        speedO.append(vel_O)
-
-        speed_C_amp = min_amp-max_amp
-        speed_C_time = min_time-max_time
-
-        vel_C = speed_C_amp/speed_C_time
-        speedC.append(vel_C)
-
-    dict_speedOC = {'opening speed': speedO,'closing speed': speedC}
-    
-    return  dict_speedOC
-
-
-"""
-Speed per tap
-"""
-
-
-def speed_tap(df_time_amp, min_idx):
-
-    # Speed per tap = Speed per closing
-    speed_per_tap = []
-    counter = 0
-    counter_ls = []
-
-
-    for i in np.arange(0,len(min_idx[:-1])):
-      
-        min_time1 = df_time_amp.iloc[min_idx[i]]['program_time']
-        min_amp1 = df_time_amp.iloc[min_idx[i]]['inv_distance']
-        min_time2 = df_time_amp.iloc[min_idx[i+1]]['program_time']
-        min_amp2 = df_time_amp.iloc[min_idx[i+1]]['inv_distance']
-
-        speed_C_amp = min_amp2-min_amp1
-        speed_C_time = min_time2-min_time1
-
-        vel_C = speed_C_amp/speed_C_time
-        speed_per_tap.append(vel_C)
-
-        counter += 1
-        counter_ls.append(counter)
-    
-
-    plt.scatter(counter_ls, speed_per_tap)
-    plt.xlabel('tap')
-    plt.ylabel('speed_C')
-    plt.title('Speed per Tap')
-
-    print(f'# tap: {len(counter_ls)}')
-
-    return speed_per_tap   
+#     return block_feature_list
