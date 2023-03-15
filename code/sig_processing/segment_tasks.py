@@ -130,7 +130,7 @@ def regularize_block(
 
         new_df.insert(loc = new_df.shape[1], column = col, value = new_values)
 
-    clean_new_df = import_dat.remove_double_and_onlyNan_rows(new_df)
+    clean_new_df = import_dat.cleaning_data(new_df)
 
     clean_new_df.insert(loc = 1, column = 'program_time', value = np.linspace(0, new_timedelta_ms, clean_new_df.shape[0]))
 
