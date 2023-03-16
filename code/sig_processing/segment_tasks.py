@@ -68,7 +68,7 @@ def block_extraction(
                 )
                 ].reset_index(drop=True)
 
-        blocks_dict[f'b{b_idx}'] = regularize_block(old_df, 1000/9)
+        blocks_dict[f'b{b_idx}'] = regularize_block(old_df, 10)
 
     return blocks_dict
 
