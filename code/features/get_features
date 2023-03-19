@@ -1,9 +1,6 @@
 import numpy as np
 import pandas as pd
-from scipy.spatial import distance
 import matplotlib.pyplot as plt
-from scipy.signal import find_peaks
-import operator
 
 from movement_calc import helpfunctions as hp
 
