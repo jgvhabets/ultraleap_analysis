@@ -17,8 +17,14 @@ def calc_fps(
     Returns:
         - sampling frequency (float)
     """
-    time = list(df['program_time'])
+    try: 
+        time = list(df['program_time']) 
+
+    except KeyError:
+        time = list(df['time'])
+
     dur = time[-1] - time[0]
+
     return len(df) / dur
 
 
@@ -133,7 +139,7 @@ def calc_prosup_angle(df,
 
 
 def find_min_max(
-    dist_dataframe
+    dist_dataframe, task
 ):
     '''
     Function to calculate the indexes of the maximum values 
@@ -150,16 +156,34 @@ def find_min_max(
 
     '''
 
-    dist_array = np.array(dist_dataframe.iloc[:,0])
-    peaks_idx_max, _ = find_peaks(
-        dist_array, 
-        height = np.mean(dist_array)-np.std(dist_array),
-        prominence = 0.02,
-    )
 
-    peaks_idx_min = np.array([np.where(dist_dataframe.iloc[:,0] == np.array(dist_dataframe.iloc[peaks_idx_max[i]:peaks_idx_max[i+1]]).min())[0][0]
-        for i in np.arange(0, len(peaks_idx_max[:-1]))
-    ])
+    fps = calc_fps(dist_dataframe)
+
+    dist_array = np.array(dist_dataframe.iloc[:,0])
+
+    if task in ['oc', 'ft']:
+
+        peaks_idx_min, _ = find_peaks(
+        -dist_array, 
+        height= np.mean(-dist_array) - np.std(-dist_array),
+        prominence= 0.01,  # prominence of 1 cm
+        distance= fps/4 # there cannot more than 4 peaks (minima in this case) per second
+        )
+
+        peaks_idx_max = np.array([np.argmax(dist_array[peaks_idx_min[i]:peaks_idx_min[i+1]]) + peaks_idx_min[i] for i in range(len(peaks_idx_min)-1)])
+    
+    elif task == 'ps':
+                
+        peaks_idx_max, _ = find_peaks(
+        dist_array, 
+        height= 0,      
+        distance= fps/ 3    # there cannot more than 3 pronation movements (maxima in this case) per second
+        )
+
+        peaks_idx_min = np.array([np.argmin(dist_array[peaks_idx_max[i]:peaks_idx_max[i+1]]) + peaks_idx_max[i] for i in range(len(peaks_idx_max)-1)])
+    
+    else:
+        print('The task (or task name) you specified does not exist')
         
     return peaks_idx_max, peaks_idx_min
 
@@ -167,27 +191,6 @@ def find_min_max(
 '''
 BELOW NEEDS REVISION AND IS INCLUDED IN ANOTHER PY.FILE 
 '''
-# def find_zeroPasses(
-#     signal
-# ):
-#     """
-#     Finding slope changes / zeros (?)
-#     """
-
-#     zeropasses = []
-#     for i in np.arange(len(signal) - 1):
-
-#         prod = signal[i] * signal[i + 1]
-        
-#         if prod <= 0:
-
-#             zeropasses.append(i)
-    
-#     return zeropasses
-
-
-
-
 
 # def extract_tap_features(
 #     distance_over_time, min_idx,
