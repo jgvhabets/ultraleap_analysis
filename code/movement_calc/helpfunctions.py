@@ -177,7 +177,7 @@ def find_min_max(
         peaks_idx_max, _ = find_peaks(
         dist_array, 
         height= 0,      
-        distance= fps/ 3    # there cannot more than 3 pronation movements (maxima in this case) per second
+        distance= fps/ 3    # there cannot more than 3 pronation events (maxima in this case) per second
         )
 
         peaks_idx_min = np.array([np.argmin(dist_array[peaks_idx_max[i]:peaks_idx_max[i+1]]) + peaks_idx_max[i] for i in range(len(peaks_idx_max)-1)])
@@ -185,85 +185,4 @@ def find_min_max(
     else:
         print('The task (or task name) you specified does not exist')
         
-    return peaks_idx_max, peaks_idx_min
-
-
-'''
-BELOW NEEDS REVISION AND IS INCLUDED IN ANOTHER PY.FILE 
-'''
-
-# def extract_tap_features(
-#     distance_over_time, min_idx,
-# ):
-#     """
-#     Calculates features -> explain more! 
-#     """
-    
-#     # block_feature_dict= {}
-#     block_feature_list= [] # list to collect features
-#     # tap_feature_list =[]
-
-#     # lists to store features per tap
-#     max_vel_pertap = []
-#     mean_vel_pertap = []
-#     sd_vel_pertap = []
-#     max_amp_pertap = []
-#     sd_amp_pertap = []
-#     rms_pertap = []
-
-
-#     for i in np.arange(0, len(min_idx[:-1])):
-
-#         #calculating featrues per tap
-#         # min_time1 = distance_over_time.iloc[min_idx[i]]['program_time']
-#         # min_time2 = distance_over_time.iloc[min_idx[i+1]]['program_time']
-
-#         # tap_duration = min_time2 - min_time1
-
-#         tap_distances = np.array(distance_over_time.iloc[min_idx[i]:min_idx[i+1]]['distance'])
-#         tap_durations = np.array(distance_over_time.iloc[min_idx[i]:min_idx[i+1]]['program_time'])
-        
-#         df_dist = np.diff(tap_distances)
-#         df_time = np.diff(tap_durations)
-        
-#         speed_during_tap = abs(df_dist) / df_time
-
-#         if any([v == np.inf for v in speed_during_tap]) or np.isnan(speed_during_tap).any():
-                
-#             bad_sel = np.array([v == np.inf for v in speed_during_tap]) + np.isnan(speed_during_tap)
-
-#             speed_during_tap = speed_during_tap[~bad_sel]
-
-
-#         max_vel_pertap.append(np.nanmax((speed_during_tap)))
-#         mean_vel_pertap.append(np.nanmean((speed_during_tap)))
-#         sd_vel_pertap.append(np.nanstd((speed_during_tap)))
-        
-#         max_amp_pertap.append(np.nanmax(tap_distances))
-#         sd_amp_pertap.append(np.nanstd(tap_distances))
-
-#         rms_pertap.append(np.sqrt(np.nanmean(tap_distances**2)))
-#         rms_normed_pertap = (np.sqrt(np.nanmean(tap_distances**2))) / tap_durations
-
-#         # tap_fefature_list.append([mean_vel_pertap, max_vel_pertap, rms_pertap, sd_vel_pertap, max_amp_pertap, sd_amp_pertap, rms_pertap, rms_normed_pertap])
-
-#     #calculating features per block using the input from each tap
-#     max_vel_blk = np.nanmean(max_vel_pertap)
-#     mean_vel_blk = np.nanmean(mean_vel_pertap)
-#     sd_vl_blk = np.nanstd(max_vel_pertap)
-#     mean_maxamp_blk = np.nanmean(max_amp_pertap)
-#     sd_maxamp_blk = np.nanstd(max_amp_pertap)
-#     mean_rms_blk = np.nanmean(rms_pertap)
-#     sd_rms_blk = np.nanstd(rms_pertap)
-#     nrms_blk = np.nanmean(rms_normed_pertap)
-
-#     # block_feature_dict = {'max_velocity_block': max_vel_blk,
-#     #                     'mean_velocity_block': mean_vel_blk, 
-#     #                     'sd_velocity_block' :sd_vl_blk, 
-#     #                     'mean_maxamplitude_block': mean_maxamp_blk, 
-#     #                     'mean_maxamplitude_block': sd_maxamp_blk, 
-#     #                     'mean_rms_block': mean_rms_blk}
-
-#     block_feature_list.append([max_vel_blk, mean_vel_blk, sd_vl_blk, mean_maxamp_blk, sd_maxamp_blk, mean_rms_blk, sd_rms_blk, nrms_blk])
-
-#     return block_feature_list
+    return peaks_idx_min, peaks_idx_max
