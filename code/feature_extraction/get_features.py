@@ -19,23 +19,23 @@ def features_across_block(block, task):
         block_features['mean_max_amp'] = (np.nanmean(within_features['max_amp']))
         block_features['sd_max_amp'] = (np.nanstd(within_features['max_amp']))
         block_features['coef_var_max_amp'] = (np.nanstd(within_features['max_amp'])/np.nanmean(within_features['max_amp']))
-        # block_features['slope_max_amp'] = (np.polyfit(np.arange(len(within_features['max_amp'])), within_features['max_amp'], 1)[0])
+        block_features['slope_max_amp'] = (np.polyfit(np.arange(len(within_features['max_amp'])), within_features['max_amp'], 1)[0])
         
         # speed
         block_features['mean_max_vel'] = (np.nanmean(within_features['max_vel']))
         block_features['sd_max_vel'] = (np.nanstd(within_features['max_vel']))
         block_features['coef_var_max_vel'] = (np.nanstd(within_features['max_vel'])/np.nanmean(within_features['max_vel']))
-        # block_features['slope_max_vel'] = (np.polyfit(np.arange(len(within_features['max_vel'])), within_features['max_vel'], 1)[0])
+        block_features['slope_max_vel'] = (np.polyfit(np.arange(len(within_features['max_vel'])), within_features['max_vel'], 1)[0])
         block_features['mean_mean_vel'] = (np.nanmean(within_features['mean_vel']))
         block_features['sd_mean_vel'] = (np.nanstd(within_features['mean_vel']))
         block_features['coef_var_mean_vel'] = (np.nanstd(within_features['mean_vel'])/np.nanmean(within_features['mean_vel']))
-        # block_features['slope_mean_vel'] = (np.polyfit(np.arange(len(within_features['mean_vel'])), within_features['mean_vel'], 1)[0])
+        block_features['slope_mean_vel'] = (np.polyfit(np.arange(len(within_features['mean_vel'])), within_features['mean_vel'], 1)[0])
 
         # tap_duration
         block_features['mean_tap_dur'] = (np.nanmean(within_features['tap_dur']))
         block_features['sd_tap_dur'] = (np.nanstd(within_features['tap_dur']))
         block_features['coef_var_tap_dur'] = (np.nanstd(within_features['tap_dur'])/np.nanmean(within_features['tap_dur']))
-        # block_features['slope_tap_dur'] = (np.polyfit(np.arange(len(within_features['tap_dur'])), within_features['tap_dur'], 1)[0])
+        block_features['slope_tap_dur'] = (np.polyfit(np.arange(len(within_features['tap_dur'])), within_features['tap_dur'], 1)[0])
 
         # root mean square
         block_features['mean_rms'] = (np.nanmean(within_features['rms']))
