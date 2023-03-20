@@ -13,7 +13,7 @@ def savedict_as_json(path,
     file, 
     data
 ):
-    filename = file.replace('dist', 'feat')
+    filename = file.replace('dist', 'feat').replace('.csv', '')
     file_path_name = f'{path}/{filename}.json'
     with open(file_path_name, 'w') as fp:
         json.dump(data, fp)
