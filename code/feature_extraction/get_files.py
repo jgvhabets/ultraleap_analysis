@@ -3,10 +3,8 @@ import json
 
 def loadjson_as_dict(path):
     f = open(path)
-  
-    data = json.load(f)
 
-    return data
+    return json.load(f)
 
 
 def savedict_as_json(path, 
