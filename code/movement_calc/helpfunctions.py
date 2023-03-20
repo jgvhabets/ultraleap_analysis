@@ -170,19 +170,19 @@ def find_min_max(
 
     fps = calc_fps(dist_dataframe)
 
-    dist_array = np.array(dist_dataframe.iloc[:,0])
+    dist_array = np.array(dist_dataframe.iloc[:, 1])
 
     if task in ['oc', 'ft']:
 
         peaks_idx_min, _ = find_peaks(
         -dist_array, 
-        height= np.mean(-dist_array) - np.std(-dist_array),
+        height= np.mean( - dist_array) + 0.5 * np.std( - dist_array),
         prominence= 0.01,  # prominence of 1 cm
-        distance= fps/4 # there cannot more than 4 peaks (minima in this case) per second
+        distance= fps/5 # there cannot more than 4 peaks (minima in this case) per second
         )
 
         peaks_idx_max = np.array([np.argmax(dist_array[peaks_idx_min[i]:peaks_idx_min[i+1]]) + peaks_idx_min[i] for i in range(len(peaks_idx_min)-1)])
-    
+
     elif task == 'ps':
                 
         peaks_idx_max, _ = find_peaks(
