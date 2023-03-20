@@ -6,16 +6,6 @@ from scipy.signal import find_peaks
 import operator
 import json
 
-def saveasjson(path, 
-    file, 
-    data
-):
-    filename = file.replace('dist', 'feat')
-    file_path_name = path + '/' + filename + '.json'
-    with open(file_path_name, 'w') as fp:
-        json.dump(data, fp)
-    return
-
 def calc_fps(
     df 
 ):
