@@ -20,37 +20,42 @@ def features_across_block(block, task):
 
     block_features['num_events'] = within_features['num_events']
 
-    # distance
-    block_features['mean_max_amp'].append(np.nanmean(within_features['max_amp']))
-    block_features['sd_max_amp'].append(np.nanstd(within_features['max_amp']))
-    block_features['coef_var_max_amp'].append(np.nanstd(within_features['max_amp'])/np.nanmean(within_features['max_amp']))
-    block_features['slope_max_amp'].append(np.polyfit(np.arange(len(within_features['max_amp'])), within_features['max_amp'], 1)[0])
-    
-    # speed
-    block_features['mean_max_vel'].append(np.nanmean(within_features['max_vel']))
-    block_features['sd_max_vel'].append(np.nanstd(within_features['max_vel']))
-    block_features['coef_var_max_vel'].append(np.nanstd(within_features['max_vel'])/np.nanmean(within_features['max_vel']))
-    block_features['slope_max_vel'].append(np.polyfit(np.arange(len(within_features['max_vel'])), within_features['max_vel'], 1)[0])
-    block_features['mean_mean_vel'].append(np.nanmean(within_features['mean_vel']))
-    block_features['sd_mean_vel'].append(np.nanstd(within_features['mean_vel']))
-    block_features['coef_var_mean_vel'].append(np.nanstd(within_features['mean_vel'])/np.nanmean(within_features['mean_vel']))
-    block_features['slope_mean_vel'].append(np.polyfit(np.arange(len(within_features['mean_vel'])), within_features['mean_vel'], 1)[0])
+    if within_features['num_events'] <=1:
+        block_features = {feat: ['nan'] for feat in features}
 
-    # tap_duration
-    block_features['mean_tap_dur'].append(np.nanmean(within_features['tap_dur']))
-    block_features['sd_tap_dur'].append(np.nanstd(within_features['tap_dur']))
-    block_features['coef_var_tap_dur'].append(np.nanstd(within_features['tap_dur'])/np.nanmean(within_features['tap_dur']))
-    block_features['slope_tap_dur'].append(np.polyfit(np.arange(len(within_features['tap_dur'])), within_features['tap_dur'], 1)[0])
+    else:
+        # distance
+        block_features['mean_max_amp'].append(np.nanmean(within_features['max_amp']))
+        block_features['sd_max_amp'].append(np.nanstd(within_features['max_amp']))
+        block_features['coef_var_max_amp'].append(np.nanstd(within_features['max_amp'])/np.nanmean(within_features['max_amp']))
+        block_features['slope_max_amp'].append(np.polyfit(np.arange(len(within_features['max_amp'])), within_features['max_amp'], 1)[0])
+        
+        # speed
+        block_features['mean_max_vel'].append(np.nanmean(within_features['max_vel']))
+        block_features['sd_max_vel'].append(np.nanstd(within_features['max_vel']))
+        block_features['coef_var_max_vel'].append(np.nanstd(within_features['max_vel'])/np.nanmean(within_features['max_vel']))
+        block_features['slope_max_vel'].append(np.polyfit(np.arange(len(within_features['max_vel'])), within_features['max_vel'], 1)[0])
+        block_features['mean_mean_vel'].append(np.nanmean(within_features['mean_vel']))
+        block_features['sd_mean_vel'].append(np.nanstd(within_features['mean_vel']))
+        block_features['coef_var_mean_vel'].append(np.nanstd(within_features['mean_vel'])/np.nanmean(within_features['mean_vel']))
+        block_features['slope_mean_vel'].append(np.polyfit(np.arange(len(within_features['mean_vel'])), within_features['mean_vel'], 1)[0])
 
-    # root mean square
-    block_features['mean_rms'].append(np.nanmean(within_features['rms']))
-    block_features['sd_rms'].append(np.nanstd(within_features['rms']))
-    block_features['sum_rms'].append(np.sum(within_features['rms']))
+        # tap_duration
+        block_features['mean_tap_dur'].append(np.nanmean(within_features['tap_dur']))
+        block_features['sd_tap_dur'].append(np.nanstd(within_features['tap_dur']))
+        block_features['coef_var_tap_dur'].append(np.nanstd(within_features['tap_dur'])/np.nanmean(within_features['tap_dur']))
+        block_features['slope_tap_dur'].append(np.polyfit(np.arange(len(within_features['tap_dur'])), within_features['tap_dur'], 1)[0])
 
-    # normalized root mean square
-    block_features['mean_nrms'].append(np.nanmean(within_features['nrms']))
-    block_features['sd_nrms'].append(np.nanstd(within_features['nrms']))
-    block_features['sum_nrms'].append(np.sum(within_features['nrms']))
+        # root mean square
+        block_features['mean_rms'].append(np.nanmean(within_features['rms']))
+        block_features['sd_rms'].append(np.nanstd(within_features['rms']))
+        block_features['sum_rms'].append(np.sum(within_features['rms']))
+
+        # normalized root mean square
+        block_features['mean_nrms'].append(np.nanmean(within_features['nrms']))
+        block_features['sd_nrms'].append(np.nanstd(within_features['nrms']))
+        block_features['sum_nrms'].append(np.sum(within_features['nrms']))
+
 
 
     return block_features
@@ -60,11 +65,14 @@ def features_within_block(block, task):
 
     if task in ['ft', 'oc']:
 
+        min_idx, _ = hp.find_min_max(block, task)
+
         features = ['num_events', 'max_amp', 'max_vel', 'mean_vel', 'tap_dur', 'rms', 'nrms']
 
         within_features = {feat: [] for feat in features}
 
-        min_idx, _ = hp.find_min_max(block, task)
+        if len(min_idx) <= 1:
+             within_features = {feat: ['nan'] for feat in features}
 
         within_features['num_events'] = (len(min_idx))
 
@@ -82,7 +90,7 @@ def features_within_block(block, task):
 
             df_dist = np.diff(distances)
             df_time = np.diff(durations)
-            
+
             vel = abs(df_dist) / df_time
 
             within_features['max_amp'].append(np.nanmax(distances))
@@ -93,3 +101,13 @@ def features_within_block(block, task):
             within_features['nrms'].append((np.sqrt(np.nanmean(distances**2))) / tap_dur)
 
     return within_features
+
+
+
+def no_features_in_block_(within_features):
+    within_features['max_amp'].append('nan')
+    within_features['max_vel'].append('nan')
+    within_features['mean_vel'].append('nan')
+    within_features['tap_dur'].append('nan')
+    within_features['rms'].append('nan')
+    within_features['nrms'].append('nan')
