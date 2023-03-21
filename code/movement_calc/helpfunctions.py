@@ -160,7 +160,7 @@ def find_min_max(
 
     fps = calc_fps(dist_dataframe)
 
-    dist_array = np.array(dist_dataframe.iloc[:, 1])
+    dist_array = np.array(dist_dataframe.iloc[:, 0])
 
     if task in ['oc', 'ft']:
 
@@ -174,16 +174,75 @@ def find_min_max(
         peaks_idx_max = np.array([np.argmax(dist_array[peaks_idx_min[i]:peaks_idx_min[i+1]]) + peaks_idx_min[i] for i in range(len(peaks_idx_min)-1)])
 
     elif task == 'ps':
-                
-        peaks_idx_max, _ = find_peaks(
-        dist_array, 
-        height= 0,      
-        distance= fps/ 3    # there cannot more than 3 pronation events (maxima in this case) per second
-        )
 
-        peaks_idx_min = np.array([np.argmin(dist_array[peaks_idx_max[i]:peaks_idx_max[i+1]]) + peaks_idx_max[i] for i in range(len(peaks_idx_max)-1)])
-    
+        pronation_val = [max(i, 0) for i in dist_dataframe.iloc[:, 0]]
+        supination_val = [min(i, 0) for i in dist_dataframe.iloc[:, 0]]
+
+        peaks_idx_min = supination_idx(supination_val)
+
+        peaks_idx_max = pronation_idx(pronation_val)
+
     else:
         print('The task (or task name) you specified does not exist')
+    
         
     return peaks_idx_min, peaks_idx_max
+
+
+def supination_idx(
+    values = list
+):
+
+    '''
+    
+    This function finds the indexes of local minima in supination movements.
+    
+    '''
+
+    zero_indices = [i for i, x in enumerate(values) if x == 0]
+
+    sup_idx = []
+    start = 0
+    for i in zero_indices:
+
+        sub_lst = values[start:i]
+        local_max = min(sub_lst, default=None)
+
+        if local_max is not None:
+
+            local_max_idx = sub_lst.index(local_max) + start
+            sup_idx.append(local_max_idx)
+
+        start = i + 1
+
+    return sup_idx
+
+
+def pronation_idx(
+    values = list
+):
+
+    '''
+    
+    This function finds the indexes of local minima in pronation movements.
+    
+    '''
+
+
+    zero_indices = [i for i, x in enumerate(values) if x == 0]
+
+    pro_idx = []
+    start = 0
+    for i in zero_indices:
+
+        sub_lst = values[start:i]
+        local_max = max(sub_lst, default=None)
+
+        if local_max is not None:
+
+            local_max_idx = sub_lst.index(local_max) + start
+            pro_idx.append(local_max_idx)
+
+        start = i + 1
+
+    return pro_idx
