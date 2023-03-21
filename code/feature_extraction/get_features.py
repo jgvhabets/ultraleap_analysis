@@ -63,44 +63,95 @@ def features_across_block(block, task):
 
     return block_features
 
-# get features for each 'tap -> needede for above function 
+# get features for each tap/ movement -> needed for function above
 def features_within_block(block, task):
 
     if task in ['ft', 'oc']:
+        within_features = tap_features_within_block(block, task)
 
-        min_idx, _ = hp.find_min_max(block, task)
-
-        features = ['num_events', 'max_amp', 'max_vel', 'mean_vel', 'tap_dur', 'rms', 'nrms']
-
-        within_features = {feat: [] for feat in features}
-
-        if len(min_idx) <= 1:
-             within_features = {feat: ['nan'] for feat in features}
-
-        within_features['num_events'] = (len(min_idx))
-
-        for i in np.arange(0, len(min_idx[:-1])):
-
-            try:
-                distances = np.array(block.iloc[min_idx[i]:min_idx[i+1]]['index_tip_thumb_tip'])
-
-            except KeyError:
-                distances = np.array(block.iloc[min_idx[i]:min_idx[i+1]]['middle_tip_palm'])
-
-            durations = np.array(block.iloc[min_idx[i]:min_idx[i+1]]['time'])
-
-            tap_dur = block.iloc[min_idx[i+1]]['time'] - block.iloc[min_idx[i]]['time']
-
-            df_dist = np.diff(distances)
-            df_time = np.diff(durations)
-
-            vel = abs(df_dist) / df_time
-
-            within_features['max_amp'].append(np.nanmax(distances))
-            within_features['max_vel'].append(np.nanmax(vel))
-            within_features['mean_vel'].append(np.nanmean(vel))
-            within_features['tap_dur'].append(tap_dur)
-            within_features['rms'].append(np.sqrt(np.nanmean(distances**2)))
-            within_features['nrms'].append((np.sqrt(np.nanmean(distances**2))) / tap_dur)
+    if task == 'ps':
+        within_features = pro_sup_features_within_block(block, task)
 
     return within_features
+
+
+
+def pro_sup_features_within_block(block, task):
+    sup_idx, pro_idx = hp.find_min_max(block, task)
+
+    # make sure that the first index is from a pronation position. I.e. from the first to second index
+    # should reflect a supinatino movement, just like is practice
+    prosup_idx = ( sorted(sup_idx[1:] + pro_idx) if pro_idx[0] > sup_idx[0] else sorted(sup_idx + pro_idx) )
+    
+    feature_names = ['num_pro_events', 'num_sup_events', 'num_pro_sup_events',
+                'max_pro_ang', 'max_sup_ang', 
+                'pro_vel', 'sup_vel', 'pro_sup_vel',
+                'pro_dur', 'sup_dur', 'pro_sup_dur', 
+    ]
+    features = {feat: [] for feat in feature_names}
+
+    features['num_pro_events'].append(len(pro_idx))
+    features['num_sup_events'].append(len(sup_idx))
+    features['num_pro_sup_events'].append(len(pro_idx)-1)
+
+    for i in np.arange(0, len(pro_idx[:-1])):
+        features['max_pro_ang'].append(block.iloc[:, 0][i])
+
+        # duration of one "pronation-supination" movement starting in the pronatino position (turning hand until palm faces down again)
+        features['pro_sup_dur'].append(
+            block.iloc[:, 1][i + 1] - block.iloc[:, 0][i]) 
+
+
+    for i in sup_idx:
+        features['max_sup_ang'].append(block.iloc[:, 0][i])
+
+
+    for i in np.arange(0, len(prosup_idx[:-1])):
+            # duration of movement from pronation to supination all in one list (from each idx to another). 
+            # for further extraction of each movement seperately
+        pro_sup_dur_all = [ block.iloc[: ,1][i + 1] - block.iloc[:, 1][i] ]
+
+    features['sup_dur'].append(pro_sup_dur_all[::2])
+    features['pro_dur'].append(pro_sup_dur_all[1::2])
+
+    return features
+
+
+
+def tap_features_within_block(block, task):
+    min_idx, _ = hp.find_min_max(block, task)
+
+    feature_names = ['num_events', 'max_amp', 'max_vel', 'mean_vel', 'tap_dur', 'rms', 'nrms']
+
+    features = {feat: [] for feat in feature_names}
+
+    if len(min_idx) <= 1:
+        features = {feat: ['nan'] for feat in features}
+
+    features['num_events'] = (len(min_idx))
+
+    for i in np.arange(0, len(min_idx[:-1])):
+
+        try:
+            distances = np.array(block.iloc[min_idx[i]:min_idx[i+1]]['index_tip_thumb_tip'])
+
+        except KeyError:
+            distances = np.array(block.iloc[min_idx[i]:min_idx[i+1]]['middle_tip_palm'])
+
+        durations = np.array(block.iloc[min_idx[i]:min_idx[i+1]]['time'])
+
+        tap_dur = block.iloc[min_idx[i+1]]['time'] - block.iloc[min_idx[i]]['time']
+
+        df_dist = np.diff(distances)
+        df_time = np.diff(durations)
+
+        vel = abs(df_dist) / df_time
+
+        features['max_amp'].append(np.nanmax(distances))
+        features['max_vel'].append(np.nanmax(vel))
+        features['mean_vel'].append(np.nanmean(vel))
+        features['tap_dur'].append(tap_dur)
+        features['rms'].append(np.sqrt(np.nanmean(distances**2)))
+        features['nrms'].append((np.sqrt(np.nanmean(distances**2))) / tap_dur)
+
+    return features
