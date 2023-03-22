@@ -21,26 +21,25 @@ def features_across_block(block, task):
             block_features['mean_max_amp'] = (np.nanmean(within_features['max_amp']))
             block_features['sd_max_amp'] = (np.nanstd(within_features['max_amp']))
             block_features['coef_var_max_amp'] = (np.nanstd(within_features['max_amp'])/np.nanmean(within_features['max_amp']))
-            block_features['slope_max_amp'] = (np.polyfit(np.arange(len(within_features['max_amp'])), within_features['max_amp'], 1)[0])
-            block_features['perc_dec_max_amp'] = abs(((within_features['max_amp'][0] - within_features['max_amp'][-1]) / within_features['max_amp'][0]) * 100)
+            block_features['dec_max_amp'] = abs(np.nanmean(within_features['max_amp'][:3])) - (np.nanmean(within_features['max_amp'][-3:]))
+            block_features['perc_dec_max_amp'] = abs(((np.nanmean(within_features['max_amp'][:3])) - (np.nanmean(within_features['max_amp'][-3:])) / (np.nanmean(within_features['max_amp'][:3])) * 100))
 
             # speed
             block_features['mean_max_vel'] = (np.nanmean(within_features['max_vel']))
             block_features['sd_max_vel'] = (np.nanstd(within_features['max_vel']))
             block_features['coef_var_max_vel'] = (np.nanstd(within_features['max_vel'])/np.nanmean(within_features['max_vel']))
-            block_features['slope_max_vel'] = (np.polyfit(np.arange(len(within_features['max_vel'])), within_features['max_vel'], 1)[0])
+            block_features['dec_max_vel'] = abs(np.nanmean(within_features['max_vel'][:3])) - (np.nanmean(within_features['max_vel'][-3:]))
+            block_features['perc_dec_max_vel'] = abs(((np.nanmean(within_features['max_vel'][:3])) - (np.nanmean(within_features['max_vel'][-3:])) / (np.nanmean(within_features['max_vel'][:3])) * 100))
             block_features['mean_mean_vel'] = (np.nanmean(within_features['mean_vel']))
             block_features['sd_mean_vel'] = (np.nanstd(within_features['mean_vel']))
             block_features['coef_var_mean_vel'] = (np.nanstd(within_features['mean_vel'])/np.nanmean(within_features['mean_vel']))
-            block_features['slope_mean_vel'] = (np.polyfit(np.arange(len(within_features['mean_vel'])), within_features['mean_vel'], 1)[0])
-            block_features['perc_dec_max_vel'] = abs(((within_features['max_vel'][0] - within_features['max_vel'][-1]) / within_features['max_vel'][0]) * 100)
 
             # tap_duration
             block_features['mean_tap_dur'] = (np.nanmean(within_features['tap_dur']))
             block_features['sd_tap_dur'] = (np.nanstd(within_features['tap_dur']))
             block_features['coef_var_tap_dur'] = (np.nanstd(within_features['tap_dur'])/np.nanmean(within_features['tap_dur']))
-            block_features['slope_tap_dur'] = (np.polyfit(np.arange(len(within_features['tap_dur'])), within_features['tap_dur'], 1)[0])
-            block_features['perc_dec_tap_dur'] = abs(((within_features['tap_dur'][0] - within_features['tap_dur'][-1]) / within_features['tap_dur'][0]) * 100)
+            block_features['dec_tap_dur'] = abs(np.nanmean(within_features['tap_dur'][:3])) - (np.nanmean(within_features['tap_dur'][-3:]))
+            block_features['perc_dec_tap_dur'] = abs(((np.nanmean(within_features['tap_dur'][:3])) - (np.nanmean(within_features['tap_dur'][-3:])) / (np.nanmean(within_features['tap_dur'][:3])) * 100))
 
             # root mean square
             block_features['mean_rms'] = (np.nanmean(within_features['rms']))
@@ -53,9 +52,9 @@ def features_across_block(block, task):
             block_features['sum_nrms'] = (np.sum(within_features['nrms']))
 
         except TypeError:
-            features = ['mean_max_amp', 'sd_max_amp', 'coef_var_max_amp', 'slope_max_amp', 'perc_dec_max_amp',
-                        'mean_max_vel', 'sd_max_vel', 'coef_var_max_vel', 'slope_max_vel', 'mean_mean_vel', 'sd_mean_vel', 'coef_var_mean_vel', 'slope_mean_vel', 'perc_dec_max_vel',
-                        'mean_tap_dur', 'sd_tap_dur', 'coef_var_tap_dur', 'slope_tap_dur', 'perc_dec_tap_dur',
+            features = ['mean_max_amp', 'sd_max_amp', 'coef_var_max_amp', 'dec_max_amp', 'perc_dec_max_amp',
+                        'mean_max_vel', 'sd_max_vel', 'coef_var_max_vel', 'dec_max_vel', 'mean_mean_vel', 'sd_mean_vel', 'coef_var_mean_vel', 'perc_dec_max_vel',
+                        'mean_tap_dur', 'sd_tap_dur', 'coef_var_tap_dur', 'dec_tap_dur', 'perc_dec_tap_dur',
                         'mean_rms', 'sd_rms', 'sum_rms', 
                         'mean_nrms', 'sd_nrms', 'sum_nrms']
 
@@ -87,25 +86,28 @@ def features_across_block(block, task):
             block_features['mean_pro_dur'] = (np.nanmean(within_features['pro_dur']))
             block_features['sd_pr_dur'] = (np.nanstd(within_features['pro_dur']))
             block_features['coef_var_pro_dur'] = (np.nanstd(within_features['pro_dur'])/np.nanmean(within_features['pro_dur']))
+            block_features['dec_pro_dur'] = abs(within_features['pro_dur'][0] - within_features['pro_dur'][-1])
             block_features['perc_dec_pro_dur'] = abs(((within_features['pro_dur'][0] - within_features['pro_dur'][-1]) / within_features['pro_dur'][0]) * 100)
 
             block_features['mean_sup_dur'] = (np.nanmean(within_features['sup_dur']))
             block_features['sd_sup_dur'] = (np.nanstd(within_features['sup_dur']))
             block_features['coef_var_sup_dur'] = (np.nanstd(within_features['sup_dur'])/np.nanmean(within_features['sup_dur']))
+            block_features['dec_sup_dur'] = abs(within_features['sup_dur'][0] - within_features['sup_dur'][-1])
             block_features['perc_dec_sup_dur'] = abs(((within_features['sup_dur'][0] - within_features['sup_dur'][-1]) / within_features['sup_dur'][0]) * 100)
 
             block_features['mean_prosup_dur'] = (np.nanmean(within_features['pro_sup_dur']))
             block_features['sd_prosup_dur'] = (np.nanstd(within_features['pro_sup_dur']))
             block_features['coef_var_prosup_dur'] = (np.nanstd(within_features['pro_sup_dur'])/np.nanmean(within_features['pro_sup_dur']))
+            block_features['dec_prosup_dur'] = abs(within_features['pro_sup_dur'][0] - within_features['pro_sup_dur'][-1])
             block_features['perc_dec_prosup_dur'] = abs(((within_features['pro_sup_dur'][0] - within_features['pro_sup_dur'][-1]) / within_features['pro_sup_dur'][0]) * 100)
         
         except (TypeError, IndexError):
             features = ['num_pro_sup_events',
                         'mean_max_pro_ang', 'sd_max_pro_ang', 'coef_var_pro_max_ang', 'perc_dec_max_pro_ang',
                         'mean_max_sup_ang', 'sd_max_sup_ang', 'coef_var_sup_max_ang', 'perc_dec_max_sup_ang',  
-                        'mean_pro_dur', 'sd_sup_dur', 'coef_var_pro_dur', 'perc_dec_pro_dur', 
-                        'mean_sup_dur', 'sd_pr_dur', 'coef_var_sup_dur', 'perc_dec_sup_dur',
-                        'mean_prosup_dur', 'sd_prosup_dur', 'coef_var_prosup_dur', 'perc_dec_prosup_dur']
+                        'mean_pro_dur', 'sd_sup_dur', 'coef_var_pro_dur', 'dec_pro_dur', 'perc_dec_pro_dur', 
+                        'mean_sup_dur', 'sd_pr_dur', 'coef_var_sup_dur', 'dec_sup_dur', 'perc_dec_sup_dur',
+                        'mean_prosup_dur', 'sd_prosup_dur', 'coef_var_prosup_dur', 'dec_prosup_dur', 'perc_dec_prosup_dur']
 
             for feat in features:
                 if feat == 'num_pro_position':
