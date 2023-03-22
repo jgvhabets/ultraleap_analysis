@@ -101,8 +101,8 @@ def features_across_block(block, task):
         
         except (TypeError, IndexError):
             features = ['num_pro_sup_events',
-                        'mean_max_pro_ang', 'sd_max_pro_ang', 'coef_var_pro_max_ang', 'slope_max_pro_ang', 'perc_dec_max_pro_ang',
-                        'mean_max_sup_ang', 'sd_max_sup_ang', 'coef_var_sup_max_ang', 'slope_max_sup_ang', 'perc_dec_max_sup_ang',  
+                        'mean_max_pro_ang', 'sd_max_pro_ang', 'coef_var_pro_max_ang', 'perc_dec_max_pro_ang',
+                        'mean_max_sup_ang', 'sd_max_sup_ang', 'coef_var_sup_max_ang', 'perc_dec_max_sup_ang',  
                         'mean_pro_dur', 'sd_sup_dur', 'coef_var_pro_dur', 'perc_dec_pro_dur', 
                         'mean_sup_dur', 'sd_pr_dur', 'coef_var_sup_dur', 'perc_dec_sup_dur',
                         'mean_prosup_dur', 'sd_prosup_dur', 'coef_var_prosup_dur', 'perc_dec_prosup_dur']
