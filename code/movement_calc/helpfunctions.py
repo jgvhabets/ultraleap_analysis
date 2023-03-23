@@ -206,12 +206,12 @@ def supination_idx(
     for i in zero_indices:
 
         sub_lst = values[start:i]
-        local_max = min(sub_lst, default=None)
+        local_min = min(sub_lst, default=None)
 
-        if local_max is not None:
+        if local_min is not None:
 
-            local_max_idx = sub_lst.index(local_max) + start
-            sup_idx.append(local_max_idx)
+            local_min_idx = sub_lst.index(local_min) + start
+            sup_idx.append(local_min_idx)
 
         start = i + 1
 
