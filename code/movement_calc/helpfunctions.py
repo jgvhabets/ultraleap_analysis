@@ -166,7 +166,7 @@ def find_min_max(
         -dist_array, 
         height= np.mean( - dist_array) + 0.5 * np.std( - dist_array),
         prominence= 0.01,  # prominence of 1 cm
-        distance= fps/5 # there cannot more than 4 peaks (minima in this case) per second
+        distance= fps/4 # there cannot more than 4 peaks (minima in this case) per second
         )
 
         peaks_idx_max = np.array([np.argmax(dist_array[peaks_idx_min[i]:peaks_idx_min[i+1]]) + peaks_idx_min[i] for i in range(len(peaks_idx_min)-1)])
@@ -182,13 +182,6 @@ def find_min_max(
 
     else:
         print('The task (or task name) you specified does not exist')
-    
-    plt.figure(figsize=(24, 14))
-    plt.plot(dist_array)
-    plt.plot(dist_dataframe.iloc[peaks_idx_max].iloc[:,0], 'o', color= 'red')
-    plt.plot(dist_dataframe.iloc[peaks_idx_min].iloc[:,0], 'o', color= 'blue')
-    plt.show()
-    
         
     return peaks_idx_min, peaks_idx_max
 
@@ -250,34 +243,3 @@ def pronation_idx(
         start = i + 1
 
     return pro_idx
-
-
-def get_scores(sub, cond, cam, task, side, block):
-
-    read_scores = pd.read_excel(
-        os.path.join(
-        find_paths.find_onedrive_path('patientdata'),
-        f'scores_JB_JH_JR.xlsx'),
-        usecols='A:I'
-        )
-
-    read_scores.set_index('sub_cond_cam', inplace = True)
-
-    if side == 'left': side='lh'
-    elif side == 'right': side='rh'
-    
-    # read scores for all blocks of a subject in the same cond, cam per side
-    ext_scores = read_scores.loc[f'{sub}_{cond}_{cam}'][f'{task}_{side}']
-
-    if type(ext_scores) != float:
-        ls_int_sc = [int(s) for s in ext_scores if s in ['0', '1', '2', '3', '4']]
-        
-        if block == 'b1':
-            score = ls_int_sc[0]
-        elif block == 'b2':
-            score = ls_int_sc[1]
-        elif block == 'b3':
-            score = ls_int_sc[2]
-        else:
-            print(f'no scores for block {block} or block does not exist')
-        return score
