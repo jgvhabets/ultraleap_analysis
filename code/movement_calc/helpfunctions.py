@@ -147,8 +147,6 @@ def find_min_max(
     in a movement trace. Then the index of a local minimum between 
     two maxima is calculated 
 
-    NEEDS REVISION! Check for different moevemt profiles!
-
     Input:
         - dist_dataframe: dataframe with values for distance betwenn two points over time
 
@@ -184,6 +182,12 @@ def find_min_max(
 
     else:
         print('The task (or task name) you specified does not exist')
+    
+    plt.figure(figsize=(24, 14))
+    plt.plot(dist_array)
+    plt.plot(dist_dataframe.iloc[peaks_idx_max].iloc[:,0], 'o', color= 'red')
+    plt.plot(dist_dataframe.iloc[peaks_idx_min].iloc[:,0], 'o', color= 'blue')
+    plt.show()
     
         
     return peaks_idx_min, peaks_idx_max
@@ -246,3 +250,34 @@ def pronation_idx(
         start = i + 1
 
     return pro_idx
+
+
+def get_scores(sub, cond, cam, task, side, block):
+
+    read_scores = pd.read_excel(
+        os.path.join(
+        find_paths.find_onedrive_path('patientdata'),
+        f'scores_JB_JH_JR.xlsx'),
+        usecols='A:I'
+        )
+
+    read_scores.set_index('sub_cond_cam', inplace = True)
+
+    if side == 'left': side='lh'
+    elif side == 'right': side='rh'
+    
+    # read scores for all blocks of a subject in the same cond, cam per side
+    ext_scores = read_scores.loc[f'{sub}_{cond}_{cam}'][f'{task}_{side}']
+
+    if type(ext_scores) != float:
+        ls_int_sc = [int(s) for s in ext_scores if s in ['0', '1', '2', '3', '4']]
+        
+        if block == 'b1':
+            score = ls_int_sc[0]
+        elif block == 'b2':
+            score = ls_int_sc[1]
+        elif block == 'b3':
+            score = ls_int_sc[2]
+        else:
+            print(f'no scores for block {block} or block does not exist')
+        return score

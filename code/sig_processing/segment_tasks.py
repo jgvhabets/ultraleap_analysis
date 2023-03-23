@@ -20,7 +20,6 @@ def block_extraction(
     Divides the cleaned data between two time points (can 
     be used in cases where all task are in the same file).
 
-    CHANGE FUNCTIONALITY FOR ONLY 1 BLOCK PRESENT
         
         Input:
             - cleaned df (DataFrame),
