@@ -21,7 +21,7 @@ def import_string_data(
     """
     Function to convert UltraLeap-data
     with incorrect commas and strings
-    in to DataFrame
+    into DataFrame
 
     Input:
         - file_path (str): directory and
@@ -57,11 +57,11 @@ def import_string_data(
 
             # take out single values global time and is pinching
             glob_time = datsplit[0]
-            
+        
             # take pinching boolean value
             try:
                 is_pinch = int(datsplit[-5])
-
+        
             # if is_pinching is missing (nan) bcs
             # hand was not recorded
             except ValueError:
@@ -103,12 +103,15 @@ def import_string_data(
         # convert list of lists to DataFrame
         df = pd.DataFrame(data=list_of_values, columns=keys)    
 
-    except (ValueError, AssertionError):
+    except (ValueError, AssertionError, UnboundLocalError):
+
         df = pd.read_csv(file_path)
+
+        if 'Unnamed: 0' in df.columns:
+            df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
 
     if removeNaNs:
             df = remove_double_and_onlyNan_rows(df)
-    
 
     return df
 
@@ -153,7 +156,7 @@ def remove_double_and_onlyNan_rows(
             to_keep.append(True)
     # create new dataframe with rows-to-keep
     clean_df = df[to_keep].reset_index(drop=True)
-    
+
     return clean_df
 
 

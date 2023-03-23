@@ -9,21 +9,39 @@ Most recent version prior to repo-deletion
 import numpy as np
 import pandas as pd
 import datetime
+from itertools import product
+import os 
+import matplotlib.pyplot as plt
 
+import traces
+from datetime import datetime
+from datetime import timedelta
+
+# Import own functions
 import import_data.preprocessing_meta_info as meta_info
+import import_data.import_and_convert_data as import_dat
+
+def get_repo_path_in_notebook():
+    """
+    Finds path of repo from Notebook.
+    Start running this once to correctly find
+    other modules/functions
+    """
+    path = os.getcwd()
+    repo_name = 'ultraleap_analysis'
+
+    while path[-len(repo_name):] != 'ultraleap_analysis':
+
+        path = os.path.dirname(path)
+    
+    return path
+
+repo_path = get_repo_path_in_notebook()
+code_path = os.path.join(repo_path, 'code')
 
 
-def block_cut(df, block_times, block):
-    block_df = df[np.logical_and(
-                df['global_time'] >= block_times[f'{block}_start'],
-                df['global_time'] <= block_times[f'{block}_end']
-            )
-            ].reset_index(drop = True)
-    return block_df
-
-
-def task_block_extraction(
-    df, sub, task, side, cond, cam
+def block_extraction(
+    df, sub, task, side, cond, cam, to_save = False, to_plot = False
 ):
     """
     Divides the cleaned data between two time points (can 
@@ -42,47 +60,166 @@ def task_block_extraction(
     # get block timestamps corresponding to data
     blocktimes = meta_info.load_block_timestamps(
         sub=sub, task=task, side=side,)
-    # # deal with Error:
-    # try:
-    #     # normal code
-    # except ValueError:
-    #     # code will only run when a valueError occurs
     
     if cam == 'desktop': cam = 'dt'
     
+    # reading excel file
     run_row = blocktimes.loc[f'{cond.lower()}_{cam.lower()}']
 
-    # the excel table has two columns 'Unnamed' if the task has 3 blocks
-    if set(['Unnamed: 8', 'Unnamed: 14']).issubset(run_row.keys()):
-        ls_blocks = ['b1', 'b2', 'b3']
-    elif set(['Unnamed: 8']).issubset(run_row.keys()):
-        ls_blocks = ['b1', 'b2']
-    else: 
-        ls_blocks = ['b1']
-
     block_times = {}
-    block_df = {}
+    blocks_dict = {}
     new_blocks = []
 
-    for block in ls_blocks:
-        for time in ['start', 'end']:
-            t = run_row[f'{block}_{time}_ul']
-            if type(t) == datetime.time: 
-                t = t.strftime("%H:%M:%S")
-                block_times[f'{block}_{time}'] = t
-                new_blocks.append(block)
-                new_blocks = list(set(new_blocks))
+    # creating a dictionary with ul_start and ul_end timepoints from excel table
+    for block, time in product(['b1', 'b2', 'b3'],['start','end']):
+        try:
+            # extracting ul_start and ul_end timepoints
+            t = run_row[f'{block}_{time}_ul']     
+            # print(type(t))
+        except KeyError:
+            if block == 'b3': continue
             else:
-                continue    
-    
+                raise KeyError('b1 or b2 not found in task_block_extraction()')
+        if type(t) != float:
+            # print(t) 
+            t = t.strftime("%H:%M:%S")
+            block_times[f'{block}_{time}'] = t
+            new_blocks.append(block)
+
+    # plot_timestamps(df, sub, cond, cam, task, side, block_times.values())       
+
+    # use set, otherwise blocknames will appear duplicated
+    new_blocks = list(set(new_blocks))
+
     for b_idx, b in enumerate(new_blocks):
-        b_idx +=1
+        b_idx += 1
       
-        block_df[f'b{b_idx}_df'] = df[
+        blocks_dict[f'b{b_idx}'] = df[
             np.logical_and(
                 df['global_time'] >= block_times[f'{b}_start'],
                 df['global_time'] <= block_times[f'{b}_end']
-                )
-                ].reset_index(drop=True)
-        locals().update(block_df)
-    return block_df
+            )
+        ].reset_index(drop=True)
+
+        reg_block = import_dat.remove_double_and_onlyNan_rows(
+            regularize_block(blocks_dict[f'b{b_idx}'], 1000/90)
+        )
+      
+        # saving block dataframes as csv files
+        if to_save:
+            
+            block_path = os.path.join(
+                        repo_path, 'data', sub, task, cond, 'cleaned_blocks')
+
+            if reg_block.empty:
+                print(f'b{b_idx}_{sub}_{cond}_{cam}_{task}_{side} is empty')
+                continue
+            
+            if not os.path.exists(block_path) and not reg_block.empty:
+                os.makedirs(block_path)
+
+            reg_block.to_csv(os.path.join(
+                block_path, f'b{b_idx}_{sub}_{cond}_{cam}_{task}_{side}.csv'))
+            
+        if to_plot:
+            plot_timestamps(df, sub, cond, cam, task, side, block_times.values())
+            
+    return 
+
+
+def regularize_block(or_block, new_timedelta_ms):
+
+    """
+    Function to regularize UltraLeap-data 
+    to have the same sampling frequency for 
+    the whole dataset.
+
+    Input:
+        - cleaned block without NaNs & double rows 
+        - timedelta: sampling period
+    
+    Returns:
+        - regularized dataframe
+    
+    """
+
+    glob_time_to_date_time = [datetime.strptime(or_block['global_time'].iloc[row], '%H:%M:%S:%f') for row in np.arange(0, or_block.shape[0])]
+    
+    if 'date_time' not in or_block.columns:
+        or_block.insert(loc = 0, column = 'date_time', value = glob_time_to_date_time)
+
+    new_df = pd.DataFrame()
+    
+    for col in or_block.columns:
+        if col.startswith('pinch'): continue
+        if not col[-1] in ['x', 'y', 'z']: continue
+
+        ls_tuple = []
+        for row in np.arange(0, or_block.shape[0]):
+            ls_tuple.append((
+                or_block['date_time'][row], 
+                or_block[col][row]
+            ))
+
+        ts = traces.TimeSeries(ls_tuple)
+
+        new_col = ts.sample(
+            sampling_period = timedelta(milliseconds = new_timedelta_ms),
+            start = or_block['date_time'][0].round('1s'),
+            end = or_block['date_time'][or_block.shape[0]-1],
+            interpolate = 'linear',
+        )
+
+        new_times = []
+        new_values = []
+
+        for t in new_col:
+            new_times.append(t[0])
+            new_values.append(t[1])
+        
+        if 'date_time' not in new_df.columns:
+            new_df.insert(loc = 0, column = 'date_time', value = new_times)
+        
+        new_df.insert(loc = new_df.shape[1], column = col, value = new_values)
+    
+    new_df.insert(loc = 1, column = 'program_time', value = np.linspace(0,new_timedelta_ms,new_df.shape[0]))
+        
+    return new_df
+
+
+
+def plot_timestamps(df, sub, cond, cam, task, side, times):
+
+    """ Function that plots the raw data with the 
+    timestamps that are used to cut the blocks.
+
+    Input:
+    - time -> block_times.values() with the ul_start and ul_end time points
+
+    Output:
+    -
+    """
+
+    glob_time_to_date_time = [datetime.strptime(df['global_time'].iloc[row], '%H:%M:%S:%f') for row in np.arange(0, df.shape[0])]
+    ls_times = list(times)
+
+    fig = plt.figure(figsize=(8,6))
+
+    x_values = [datetime.strptime(ls_times[time], '%H:%M:%S') for time in np.arange(0, len(ls_times))]
+    y_values = len(list(times))*[np.mean(df['index_tip_x'])]
+
+    plt.scatter(x_values, y_values, s=75, c='red')
+    plt.plot(glob_time_to_date_time, df['index_tip_x'], alpha = .7)
+
+    fig_dir = os.path.join(repo_path, 'figures', 'raw_data_with_timepoints', sub, task, cond)
+
+    if not os.path.exists(fig_dir):
+        os.makedirs(fig_dir)
+
+    fig.savefig(
+        os.path.join(fig_dir, f'{sub}_{cond}_{cam}_{task}_{side}'),
+        dpi = 300, facecolor = 'w',
+        )
+    plt.close()
+
+    return 
