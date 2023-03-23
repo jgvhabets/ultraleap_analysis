@@ -37,7 +37,11 @@ def block_extraction(
 
     if cam == 'desktop': cam = 'dt'
 
-    run_row = blocktimes.loc[f'{cond.lower()}_{cam.lower()}']
+    if 'control' in str(sub):
+        run_row = blocktimes.loc[f'{cam.lower()}']
+
+    elif 'ul' in str(sub):
+        run_row = blocktimes.loc[f'{cond.lower()}_{cam.lower()}']
 
     block_times = {}
     blocks_dict = {}
@@ -47,10 +51,9 @@ def block_extraction(
         try:
             t = run_row[f'{block}_{time}_ul']  
 
-        except KeyError as e:
-            if block == 'b3': continue
-            else:
-                raise KeyError('b1 or b2 not found in task_block_extraction()') from e
+        except KeyError:
+            continue
+
         if type(t) != float: 
             t = t.strftime("%H:%M:%S")
             block_times[f'{block}_{time}'] = t

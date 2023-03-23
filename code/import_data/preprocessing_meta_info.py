@@ -22,16 +22,26 @@ def load_block_timestamps(
     if side == 'lh': side = 'left'
     elif side == 'rh': side = 'right'
 
-    # prevent incorrect task variable
-    if sub[:2].lower() == 'ul': sub = sub[2:]
-    
-    blocktimes = pd.read_excel(
-        os.path.join(
-            find_onedrive_path('patientdata'),
-            f'ul{sub}',
-            f'ul{sub}_block_timestamps.xlsx'),
-        sheet_name=f'{task}_{side}',
-    )
-    blocktimes.set_index('cond_cam', inplace = True)
+    if 'ul' in sub:
+        # prevent incorrect task variable
+        if sub[:2].lower() == 'ul': sub = sub[2:]
 
+        blocktimes = pd.read_excel(
+            os.path.join(
+                find_onedrive_path('patientdata'),
+                f'ul{sub}',
+                f'ul{sub}_block_timestamps.xlsx'),
+            sheet_name=f'{task}_{side}',
+        )
+        blocktimes.set_index('cond_cam', inplace = True)
+    
+    elif 'control' in sub:
+        blocktimes = pd.read_excel(
+            os.path.join(
+                find_onedrive_path('control'),
+                f'{sub}',
+                f'{sub}_block_timestamps.xlsx'),
+            sheet_name=f'{task}_{side}',
+        )
+        blocktimes.set_index('cam', inplace = True)
     return blocktimes

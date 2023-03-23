@@ -117,16 +117,29 @@ def find_raw_data_filepath(
         'right',
     }, f'given side ({side}) should be "lh" or "rh"'
 
-    # find folder with defined data
-    if len(sub) == 3: sub = f'ul{sub}'
-    subpath = os.path.join(find_onedrive_path(folder), sub)
+    if folder == 'control':
+        if len(sub) == 3: sub = f'control{sub}'
+        subpath = os.path.join(find_onedrive_path(folder), sub)
 
-    cam_folder = os.path.join(subpath, cam_pos.lower())
+        cam_folder = os.path.join(subpath, cam_pos.lower())
 
-    # only take folder with defined task
-    files = os.listdir(cam_folder)
-    sel_files = [f for f in files if (
-        task.lower() in f and condition.lower() in f)]
+        # only take folder with defined task
+        files = os.listdir(cam_folder)
+        sel_files = [f for f in files if (
+            task.lower() in f)]
+
+
+    elif folder == 'patientdata':
+        # find folder with defined data
+        if len(sub) == 3: sub = f'ul{sub}'
+        subpath = os.path.join(find_onedrive_path(folder), sub)
+
+        cam_folder = os.path.join(subpath, cam_pos.lower())
+
+        # only take folder with defined task
+        files = os.listdir(cam_folder)
+        sel_files = [f for f in files if (
+            task.lower() in f and condition.lower() in f)]
 
     if not sel_files:
         return ''

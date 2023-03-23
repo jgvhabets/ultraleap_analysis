@@ -182,24 +182,42 @@ def get_data(folder: str,
     if cam_pos.lower() not in ['vr', 'dt', 'st']:
         raise ValueError('incorrect camera variable')
 
-    
-    # find path of defined data
-    pathfile = find_paths.find_raw_data_filepath(folder=folder,
-        sub=sub, cam_pos=cam_pos, task=task,
-        condition=condition, side=side,
+    if folder == 'control':
+        pathfile = find_paths.find_raw_data_filepath(folder=folder,
+        sub=sub, cam_pos=cam_pos, task=task, side=side, condition= condition
     )
 
-    if len(pathfile) == 0: return
-    
-    assert os.path.exists(pathfile), (
-        f'selected path does not exist {pathfile}')
-    
+        if len(pathfile) == 0: return
+        
+        assert os.path.exists(pathfile), (
+            f'selected path does not exist {pathfile}')
+        
 
-    # load selected file
-    data = import_string_data(pathfile)
+        # load selected file
+        data = import_string_data(pathfile)
 
-    # clean data
-    data = cleaning_data(data)    
+        # clean data
+        data = cleaning_data(data)    
+
+    elif folder == 'patientdata':
+
+        # find path of defined data
+        pathfile = find_paths.find_raw_data_filepath(folder=folder,
+            sub=sub, cam_pos=cam_pos, task=task,
+            condition=condition, side=side,
+        )
+
+        if len(pathfile) == 0: return
+        
+        assert os.path.exists(pathfile), (
+            f'selected path does not exist {pathfile}')
+        
+
+        # load selected file
+        data = import_string_data(pathfile)
+
+        # clean data
+        data = cleaning_data(data)    
 
     return data
 
