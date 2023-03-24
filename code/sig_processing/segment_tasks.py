@@ -77,9 +77,8 @@ def block_extraction(
             t = run_row[f'{block}_{time}_ul']     
             # print(type(t))
         except KeyError:
-            if block == 'b3': continue
-            else:
-                raise KeyError('b1 or b2 not found in task_block_extraction()')
+            continue
+
         if type(t) != float:
             # print(t) 
             t = t.strftime("%H:%M:%S")

@@ -159,9 +159,9 @@ def find_min_max(distance_array, cam):
 
     peaks_idx_min, _ = find_peaks(
         -distance_array,
-        height=np.mean(-distance_array) - np.std(-distance_array),
+        height=np.mean(-distance_array) + 0.5*np.std(-distance_array),
         distance=90 / 5,
-        prominence=.001, wlen=30,
+        prominence=.001,
         )
 
     # # #     # in case none or only a few maxima and minima are detected
