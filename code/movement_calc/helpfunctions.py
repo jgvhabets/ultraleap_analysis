@@ -18,20 +18,14 @@ def calc_fps(
     Returns:
         - sampling frequency (float)
     """
-    if df.columns[0] == 'date_time':
-        df['date_time'] = pd.to_datetime(df['date_time'])
+    if df.columns[0] != 'date_time':
+        raise ValueError ('Fps cannot be calculated with the chosen time values')
 
-        time_diff = df['date_time'].iloc[-1] - df['date_time'].iloc[0]
+    df['date_time'] = pd.to_datetime(df['date_time'])
 
-        dur = time_diff.total_seconds()
-    else:    
-        try: 
-            time = list(df['program_time']) 
+    time_diff = df['date_time'].iloc[-1] - df['date_time'].iloc[0]
 
-        except KeyError:
-            time = list(df['time'])
-
-        dur = time[-1] - time[0]
+    dur = time_diff.total_seconds()
 
     return len(df) / dur
 
@@ -173,7 +167,7 @@ def find_min_max(
         -dist_array, 
         height= np.mean( - dist_array) + 0.5 * np.std( - dist_array),
         prominence= 0.01,  # prominence of 1 cm
-        distance= fps/4 # there cannot more than 4 peaks (minima in this case) per second
+        distance= 80/4 # there cannot more than 4 peaks (minima in this case) per second with a sampling rate of 80fps
         )
 
         peaks_idx_max = np.array([np.argmax(dist_array[peaks_idx_min[i]:peaks_idx_min[i+1]]) + peaks_idx_min[i] for i in range(len(peaks_idx_min)-1)])
@@ -190,11 +184,6 @@ def find_min_max(
     else:
         print('The task (or task name) you specified does not exist')
     
-    plt.figure(figsize=(18, 10))
-    plt.plot(dist_array)
-    plt.plot(dist_dataframe.iloc[peaks_idx_max].iloc[:,0], 'o', color= 'red')
-    plt.plot(dist_dataframe.iloc[peaks_idx_min].iloc[:,0], 'o', color= 'blue')
-    plt.show()
         
     return peaks_idx_min, peaks_idx_max
 
