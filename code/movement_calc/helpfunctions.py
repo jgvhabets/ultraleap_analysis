@@ -156,9 +156,6 @@ def find_min_max(
 
     '''
 
-
-    fps = calc_fps(dist_dataframe)
-
     dist_array = np.array(dist_dataframe.iloc[:, 0])
 
     if task in ['oc', 'ft']:
