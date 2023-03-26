@@ -216,9 +216,6 @@ def get_data(folder: str,
         # load selected file
         data = import_string_data(pathfile)
 
-        # clean data
-        data = cleaning_data(data)    
-
     return data
 
 
