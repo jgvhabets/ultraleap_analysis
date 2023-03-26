@@ -18,13 +18,20 @@ def calc_fps(
     Returns:
         - sampling frequency (float)
     """
-    try: 
-        time = list(df['program_time']) 
+    if df.columns[0] == 'date_time':
+        df['date_time'] = pd.to_datetime(df['date_time'])
 
-    except KeyError:
-        time = list(df['time'])
+        time_diff = df['date_time'].iloc[-1] - df['date_time'].iloc[0]
 
-    dur = time[-1] - time[0]
+        dur = time_diff.total_seconds()
+    else:    
+        try: 
+            time = list(df['program_time']) 
+
+        except KeyError:
+            time = list(df['time'])
+
+        dur = time[-1] - time[0]
 
     return len(df) / dur
 
@@ -182,6 +189,12 @@ def find_min_max(
 
     else:
         print('The task (or task name) you specified does not exist')
+    
+    plt.figure(figsize=(18, 10))
+    plt.plot(dist_array)
+    plt.plot(dist_dataframe.iloc[peaks_idx_max].iloc[:,0], 'o', color= 'red')
+    plt.plot(dist_dataframe.iloc[peaks_idx_min].iloc[:,0], 'o', color= 'blue')
+    plt.show()
         
     return peaks_idx_min, peaks_idx_max
 
