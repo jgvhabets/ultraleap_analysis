@@ -1,14 +1,13 @@
 from sklearn.feature_selection import RFECV
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import LeaveOneGroupOut
-from sklearn.model_selection import KFold, GroupKFold
+from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import GroupKFold
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
-from sklearn.model_selection import GridSearchCV
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -232,7 +231,7 @@ def predictions(X, y, classifier_list=list, groups=list):
     Precisions = []
     Recalls = []
     F1_scores = []
-    AUC_ROCs = []
+    # AUC_ROCs = []
 
     loo = GroupKFold(n_splits=len(set(groups)))
 
@@ -257,7 +256,7 @@ def predictions(X, y, classifier_list=list, groups=list):
         precision_scores = []
         recall_scores = []
         f1_scores = []
-        auc_roc_scores = []
+        # auc_roc_scores = []
 
         for i, (train_index, test_index) in enumerate(loo.split(X, y, groups=groups)):
             X_train, X_test = X.iloc[train_index], X.iloc[test_index]
@@ -281,57 +280,154 @@ def predictions(X, y, classifier_list=list, groups=list):
             precision = precision_score(y_test, y_pred)
             recall = recall_score(y_test, y_pred)
             f1 = f1_score(y_test, y_pred)
-            auc_roc = roc_auc_score(y_test, y_pred)
+            # auc_roc = roc_auc_score(y_test, y_pred)
 
             accuracy_scores.append(accuracy)
             precision_scores.append(precision)
             recall_scores.append(recall)
             f1_scores.append(f1)
-            auc_roc_scores.append(auc_roc)
+            # # auc_roc_scores.append(auc_roc)
 
         mean_accuracy = sum(accuracy_scores) / len(accuracy_scores)
         mean_precision = sum(precision_scores) / len(precision_scores)
         mean_recall = sum(recall_scores) / len(recall_scores)
         mean_f1 = sum(f1_scores) / len(f1_scores)
-        mean_auc_roc = sum(auc_roc_scores) / len(auc_roc_scores)
+        # # # mean_auc_roc = sum(auc_roc_scores) / len(auc_roc_scores)
 
         Accs.append(mean_accuracy)
         Precisions.append(mean_precision)
         Recalls.append(mean_recall)
         F1_scores.append(mean_f1)
-        AUC_ROCs.append(mean_auc_roc)
-
+        # # AUC_ROCs.append(mean_auc_roc)
+    print(Accs)
     features = []
     for i in X.columns:
         features.append(i)
     features = "\n".join(features)
 
     x_ticks = np.arange(len(classifier_list)) - 0.1
-    plt.figure(figsize=(20, 14))
-    plt.title('Preliminary comparison of model performance metrcis FT \n  cross validation: conds',  pad=15, fontsize = 25)
+    plt.figure(figsize=(25, 14))
+    plt.title('Preliminary comparison of model performance metrcis FT \n  LOOcv: conds',  pad=15, fontsize = 30)
     plt.plot(x_ticks + 0.05, Accs, '-o', markersize = 10, label='Accuracy')
     plt.plot(x_ticks - 0.05, Precisions, '-o', markersize = 10, label='Precision')
     plt.plot(x_ticks + 0.05, Recalls, '-o', markersize = 10, label='Recall')
     plt.plot(x_ticks - 0.05, F1_scores, '-o', markersize = 10, label='F1-score')
-    plt.plot(x_ticks + 0.05, AUC_ROCs, '-o', markersize = 10, label='AUC-ROC')
-    plt.xticks(x_ticks, classifier_list, fontsize = 20)
-    plt.yticks(fontsize = 15)
+    # plt.plot(x_ticks + 0.05, AUC_ROCs, '-o', markersize = 10, label='AUC-ROC')
+    plt.xticks(x_ticks, classifier_list, fontsize = 25)
+    plt.yticks(fontsize = 20)
     plt.vlines(x_ticks, ymin = 0, ymax = 0.7, linestyles='dashed', alpha = 0.4, color = 'black')
-    plt.ylabel('Value',fontsize = 20, labelpad = 10)
-    plt.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=14)
-    plt.figtext(0.9, 0.5, features, bbox=dict(facecolor='white', edgecolor='black'), fontsize=14, va='center')
+    plt.ylabel('Value',fontsize = 25, labelpad = 10)
+    plt.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=20)
+    plt.figtext(0.88, 0.5, features, bbox=dict(facecolor='white', edgecolor='black'), fontsize=20, va='center')
 
 
-    # Enable for automatic saving
-    fname = 'selected_features_pred_conds'
-    plt.tight_layout( pad = 5)
-    plt.savefig(
-        os.path.join(
-            '/Users/arianm/Documents/GitHub/ultraleap_analysis/figures/', fname
-        ),
-        dpi=300,
-        facecolor='w',
-    )
+    # # Enable for automatic saving
+    # fname = 'selected_features_pred_conds'
+    # plt.tight_layout( pad = 5)
+    # plt.savefig(
+    #     os.path.join(
+    #         '/Users/arianm/Documents/GitHub/ultraleap_analysis/figures/', fname
+    #     ),
+    #     dpi=300,
+    #     facecolor='w',
+    # )
+    plt.show()
+
+    return
+
+
+def predictions_stratkfold(X, y, classifier_list=list):
+    Accs = []
+    Precisions = []
+    Recalls = []
+    F1_scores = []
+    # AUC_ROCs = []
+
+    skf = StratifiedKFold(n_splits=10)
+
+    for c in classifier_list:
+        c = c.lower()
+        if c == 'linear':
+            classifier = SVC(kernel='linear')
+        elif c == 'nonlinear':
+            classifier = SVC(kernel='rbf')
+        elif c == 'logregression':
+            classifier = LogisticRegression(max_iter=1000)
+        elif c == 'random forest':
+            classifier = RandomForestClassifier(random_state=42)
+        elif c == 'knearest':
+            classifier = KNeighborsClassifier()
+        elif c == 'gaussian naive bayes':
+            classifier = GaussianNB()
+        else:
+            raise ValueError(f'Invalid classifier type. Check spelling for {c}')
+
+        accuracy_scores = []
+        precision_scores = []
+        recall_scores = []
+        f1_scores = []
+        # auc_roc_scores = []
+
+        for train_index, test_index in skf.split(X, y):
+            X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+            y_train, y_test = y[train_index], y[test_index]
+
+            classifier.fit(X_train, y_train)
+
+            y_pred = classifier.predict(X_test)
+
+            accuracy = accuracy_score(y_test, y_pred)
+            precision = precision_score(y_test, y_pred)
+            recall = recall_score(y_test, y_pred)
+            f1 = f1_score(y_test, y_pred)
+            # auc_roc = roc_auc_score(y_test, y_pred)
+
+            accuracy_scores.append(accuracy)
+            precision_scores.append(precision)
+            recall_scores.append(recall)
+            f1_scores.append(f1)
+            # # auc_roc_scores.append(auc_roc)
+
+        mean_accuracy = sum(accuracy_scores) / len(accuracy_scores)
+        mean_precision = sum(precision_scores) / len(precision_scores)
+        mean_recall = sum(recall_scores) / len(recall_scores)
+        mean_f1 = sum(f1_scores) / len(f1_scores)
+        # # # mean_auc_roc = sum(auc_roc_scores) / len(auc_roc_scores)
+
+        Accs.append(mean_accuracy)
+        Precisions.append(mean_precision)
+        Recalls.append(mean_recall)
+        F1_scores.append(mean_f1)
+        # # AUC_ROCs.append(mean_auc_roc)
+    print(Accs)
+    features = "\n".join(X.columns)
+
+    x_ticks = np.arange(len(classifier_list)) - 0.1
+    plt.figure(figsize=(25, 14))
+    plt.title('Preliminary comparison of model performance metrcis FT \n  Stratified k-fold cross-validation: 10 folds',  pad=15, fontsize = 30)
+    plt.plot(x_ticks + 0.05, Accs, '-o', markersize = 10, label='Accuracy')
+    plt.plot(x_ticks - 0.05, Precisions, '-o', markersize = 10, label='Precision')
+    plt.plot(x_ticks + 0.05, Recalls, '-o', markersize = 10, label='Recall')
+    plt.plot(x_ticks - 0.05, F1_scores, '-o', markersize = 10, label='F1-score')
+    # plt.plot(x_ticks + 0.05, AUC_ROCs, '-o', markersize = 10, label='AUC-ROC')
+    plt.xticks(x_ticks, classifier_list, fontsize = 25)
+    plt.yticks(fontsize = 20)
+    plt.vlines(x_ticks, ymin = 0, ymax = 0.7, linestyles='dashed', alpha = 0.4, color = 'black')
+    plt.ylabel('Value',fontsize = 25, labelpad = 10)
+    plt.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=20)
+    plt.figtext(0.88, 0.5, features, bbox=dict(facecolor='white', edgecolor='black'), fontsize=20, va='center')
+
+
+    # # Enable for automatic saving
+    # fname = 'selected_features_pred_conds'
+    # plt.tight_layout( pad = 5)
+    # plt.savefig(
+    #     os.path.join(
+    #         '/Users/arianm/Documents/GitHub/ultraleap_analysis/figures/', fname
+    #     ),
+    #     dpi=300,
+    #     facecolor='w',
+    # )
     plt.show()
 
     return
