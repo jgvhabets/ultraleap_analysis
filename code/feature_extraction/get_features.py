@@ -1,3 +1,4 @@
+import contextlib
 import numpy as np
 import pandas as pd
 
@@ -13,7 +14,7 @@ def features_across_block(block, task):
 
     if task in ['ft', 'oc']:
 
-        try:
+        with contextlib.suppress(TypeError):
             #number of events
             block_features['num_events'] = within_features['num_events']
 
@@ -51,21 +52,8 @@ def features_across_block(block, task):
             block_features['sd_nrms'] = (np.nanstd(within_features['nrms']))
             block_features['sum_nrms'] = (np.sum(within_features['nrms']))
 
-        except TypeError:
-            features = ['mean_max_amp', 'sd_max_amp', 'coef_var_max_amp', 'dec_max_amp', 'perc_dec_max_amp',
-                        'mean_max_vel', 'sd_max_vel', 'coef_var_max_vel', 'dec_max_vel', 'mean_mean_vel', 'sd_mean_vel', 'coef_var_mean_vel', 'perc_dec_max_vel',
-                        'mean_tap_dur', 'sd_tap_dur', 'coef_var_tap_dur', 'dec_tap_dur', 'perc_dec_tap_dur',
-                        'mean_rms', 'sd_rms', 'sum_rms', 
-                        'mean_nrms', 'sd_nrms', 'sum_nrms']
-
-            for feat in features:
-                if feat == 'num_events':
-                    block_features[feat] = within_features['num_event']
-                else:
-                    block_features[feat] = 'nan'
-
     elif task == 'ps':
-        try:
+        with contextlib.suppress(TypeError, IndexError):
             #number of events
             block_features['num_pro_position'] = within_features['num_pro_position']
             block_features['num_sup_position'] = within_features['num_sup_position']
@@ -100,22 +88,6 @@ def features_across_block(block, task):
             block_features['coef_var_prosup_dur'] = (np.nanstd(within_features['pro_sup_dur'])/np.nanmean(within_features['pro_sup_dur']))
             block_features['dec_prosup_dur'] = within_features['pro_sup_dur'][0] - within_features['pro_sup_dur'][-1]
             block_features['perc_dec_prosup_dur'] = abs((within_features['pro_sup_dur'][0] - within_features['pro_sup_dur'][-1]) / within_features['pro_sup_dur'][0] * 100)
-        
-        except (TypeError, IndexError):
-            features = ['num_pro_sup_events',
-                        'mean_max_pro_ang', 'sd_max_pro_ang', 'coef_var_pro_max_ang', 'perc_dec_max_pro_ang',
-                        'mean_max_sup_ang', 'sd_max_sup_ang', 'coef_var_sup_max_ang', 'perc_dec_max_sup_ang',  
-                        'mean_pro_dur', 'sd_sup_dur', 'coef_var_pro_dur', 'dec_pro_dur', 'perc_dec_pro_dur', 
-                        'mean_sup_dur', 'sd_pr_dur', 'coef_var_sup_dur', 'dec_sup_dur', 'perc_dec_sup_dur',
-                        'mean_prosup_dur', 'sd_prosup_dur', 'coef_var_prosup_dur', 'dec_prosup_dur', 'perc_dec_prosup_dur']
-
-            for feat in features:
-                if feat == 'num_pro_position':
-                    block_features[feat] = within_features['num_pro_position']
-                if feat == 'num_sup_position':
-                    block_features[feat] = within_features['num_sup_position']
-                else:
-                    block_features[feat] = 'nan'
 
     return block_features
 
