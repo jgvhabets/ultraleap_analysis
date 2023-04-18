@@ -8,8 +8,9 @@ from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.model_selection import GridSearchCV
 import numpy as np
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sn
 import os
@@ -136,88 +137,88 @@ def boxplot_by_dataframe(dataframes, column_name):
     return
 
 
-def delete_feat_col(df):
-    # Find columns that contain 'xxx' in their name
-    columns_to_delete = [col for col in df.columns if '_rms' in col]
-    # columns_to_delete = []
-    columns_to_delete.extend(('mean_mean_vel', 'mean_max_vel', 'num_events', 'mean_nrms', 'sd_mean_vel', 'sd_tap_dur'))
+def delete_feat_col(df, feat_to_drop = list):
+
+    columns_to_delete = feat_to_drop
 
     df = df.drop(columns=columns_to_delete)
 
     return df
 
 
-def feat_selection_RFE(df, y, subject_ids, min_features= int, scoring='r2', step=1, n_jobs=-1):
+def feat_selection_RFE(df, y, groups, min_features= int, scoring= 'r2', step=1, n_jobs=-1):
     # create a Random Forest model
     rf = RandomForestRegressor(n_estimators=100, random_state=42)
 
     # LOOCV
-    cv = LeaveOneGroupOut()
+    loocv = GroupKFold(n_splits=len(set(groups)))
 
     # create an RFECV object for recursive feature selection
-    selector = RFECV(estimator=rf, min_features_to_select=min_features, cv=cv, scoring=scoring, step=step, n_jobs=n_jobs)
+    selector = RFECV(estimator=rf, min_features_to_select=min_features, cv=loocv, scoring=scoring, step=step, n_jobs=n_jobs)
 
     # fit to the data
-    selector.fit(df, y, groups=subject_ids)
+    selector.fit(df, y, groups=groups)
 
     # get the R-squared score
     r2_score = selector.score(df, y)
-
     
     feature_names = df.columns[selector.support_].tolist()
 
-
-    # return the R-squared score and selected feature names
     return r2_score, feature_names
 
 
-def feat_selection_importance(df, y, k):
-    # create a Random Forest model
+def feat_selection_importance(df, y, groups, k):
+
     rf = RandomForestRegressor(n_estimators=100, random_state=42)
-    
-    rf.fit(df, y)
-    
-    importances = rf.feature_importances_
-    
+
+    importances = np.zeros((len(df.columns), len(groups)))
+
+    loocv = GroupKFold(n_splits=len(set(groups)))
+
+    for i, (train_index, test_index) in enumerate(loocv.split(df, y, groups)):
+        X_train, y_train = df.iloc[train_index], y[train_index]
+
+        rf.fit(X_train, y_train)
+
+        importances[:, i] = rf.feature_importances_
+
+    # average the feature importances across all folds
+    mean_importances = np.mean(importances, axis=1)
+
     # sort feature importances (most to least)
-    indices = np.argsort(importances)[::-1]
-    
+    indices = np.argsort(mean_importances)[::-1]
+
     # select the top K features
     top_k_indices = indices[:k]
     top_k_features = df.iloc[:, top_k_indices]
-    
-    # create a correlation matrix of the top K features
-    corr_matrix = top_k_features.corr()
-    matrix = np.triu(corr_matrix)
-    plt.figure(figsize=(20, 10))
-    plt.title('Correlation matrix for FT features',  pad=15, weight = 'bold', fontsize = 15)
+    top_k_importances = mean_importances[top_k_indices]
 
-    sn.heatmap(corr_matrix, annot=True, mask=matrix, cmap="vlag")
-    
-    return top_k_features
+    return pd.DataFrame(
+        {'feature': top_k_features.columns, 'importance': top_k_importances}
+    )
 
 
 def define_groups(df, name = str):
 
-    filename = df['filename']
+    filenames = df['filename']
     name = name.lower()
 
     if name in ['sub', 'subs', 'subject', 'subjects', 'sub_id', 'sub_ids']:
-        if filename[0].startswith('feat'): filename = [x[8:13] for x in filename]
+        if filenames[0].startswith('feat'): filename = [x[8:13] for x in filenames]
 
         sub_per_sample = dict(enumerate(filename))
 
         groups = [sub_per_sample[sample] for sample in range(len(filename))]
     
     elif name in ['cond', 'conds', 'condition', 'conditions']:
-        if filenames[0].startswith('feat'): filenames= [x[14:18] for x in filenames]
+        if filenames[0].startswith('feat'): filename= [x[14:18] for x in filenames]
 
         file = []
-        for filename in filenames:
-            if '_' in filename:
-                file.append(filename[:-2])
+        for i in filename:
+            if '_' in i:
+                file.append(i[:-2])
             else:
-                file.append(filename)
+                file.append(i)
 
         cond_per_sample = dict(enumerate(file))
 
@@ -231,7 +232,7 @@ def predictions(X, y, classifier_list=list, groups=list):
     Precisions = []
     Recalls = []
     F1_scores = []
-    AUC_ROCs = []
+    # AUC_ROCs = []
 
     loo = GroupKFold(n_splits=len(set(groups)))
 
@@ -244,7 +245,7 @@ def predictions(X, y, classifier_list=list, groups=list):
         elif c == 'logregression':
             classifier = LogisticRegression(max_iter= 1000)
         elif c == 'random forest':
-            classifier = RandomForestClassifier()
+            classifier = RandomForestClassifier(random_state=42)
         elif c == 'knearest':
             classifier = KNeighborsClassifier()
         elif c == 'gaussian naive bayes':
@@ -256,16 +257,17 @@ def predictions(X, y, classifier_list=list, groups=list):
         precision_scores = []
         recall_scores = []
         f1_scores = []
-        auc_roc_scores = []
+        # auc_roc_scores = []
 
-        for (train_index, test_index) in enumerate(loo.split(X, y, groups=groups)):
+        for i, (train_index, test_index) in enumerate(loo.split(X, y, groups=groups)):
             X_train, X_test = X.iloc[train_index], X.iloc[test_index]
             y_train, y_test = y[train_index], y[test_index]
 
-            ## Enable for tracking of fold characteristics
+            # # Enable for tracking of fold characteristics
             # test_sub = {groups[index] for index in test_index}
             # train_subs = {groups[index] for index in train_index}
 
+            # print(f'Fold number {i} for {c}')
             # print(f'  Train: {len(train_index)} files for {train_subs}')
             # print(f'  Test: {len(test_index)} files for {test_sub}')
             # print(f'train scores: {y_train}')
@@ -279,42 +281,42 @@ def predictions(X, y, classifier_list=list, groups=list):
             precision = precision_score(y_test, y_pred)
             recall = recall_score(y_test, y_pred)
             f1 = f1_score(y_test, y_pred)
-            auc_roc = roc_auc_score(y_test, y_pred)
+            # auc_roc = roc_auc_score(y_test, y_pred)
 
             accuracy_scores.append(accuracy)
             precision_scores.append(precision)
             recall_scores.append(recall)
             f1_scores.append(f1)
-            auc_roc_scores.append(auc_roc)
+            # # auc_roc_scores.append(auc_roc)
 
         mean_accuracy = sum(accuracy_scores) / len(accuracy_scores)
         mean_precision = sum(precision_scores) / len(precision_scores)
         mean_recall = sum(recall_scores) / len(recall_scores)
         mean_f1 = sum(f1_scores) / len(f1_scores)
-        mean_auc_roc = sum(auc_roc_scores) / len(auc_roc_scores)
+        # # # mean_auc_roc = sum(auc_roc_scores) / len(auc_roc_scores)
 
         Accs.append(mean_accuracy)
         Precisions.append(mean_precision)
         Recalls.append(mean_recall)
         F1_scores.append(mean_f1)
-        AUC_ROCs.append(mean_auc_roc)
+        # # AUC_ROCs.append(mean_auc_roc)
         
     x_ticks = np.arange(len(classifier_list)) - 0.1
     plt.figure(figsize=(20, 14))
-    plt.title('Preliminary comparison of model performance metrcis FT \n all features \n  cross validation: cond',  pad=15, fontsize = 25)
+    plt.title('Preliminary comparison of model performance metrcis FT \n selected features \n  cross validation: subs',  pad=15, fontsize = 25)
     plt.plot(x_ticks + 0.05, Accs, '-o', markersize = 10, label='Accuracy')
     plt.plot(x_ticks - 0.05, Precisions, '-o', markersize = 10, label='Precision')
     plt.plot(x_ticks + 0.05, Recalls, '-o', markersize = 10, label='Recall')
     plt.plot(x_ticks - 0.05, F1_scores, '-o', markersize = 10, label='F1-score')
-    plt.plot(x_ticks + 0.05, AUC_ROCs, '-o', markersize = 10, label='AUC-ROC')
+    # plt.plot(x_ticks + 0.05, AUC_ROCs, '-o', markersize = 10, label='AUC-ROC')
     plt.xticks(x_ticks, classifier_list, fontsize = 20)
     plt.yticks(fontsize = 15)
     plt.vlines(x_ticks, ymin = 0, ymax = 0.7, linestyles='dashed', alpha = 0.4, color = 'black')
     plt.ylabel('Value',fontsize = 20, labelpad = 10)
-    plt.legend(loc='best', bbox_to_anchor=(1, 1), fontsize=14)
+    plt.legend(loc='upper left', bbox_to_anchor=(1, 1), fontsize=14)
 
-    ##Enable for automatic saving
-    # fname = 'all_features_pred_cond'
+    # # Enable for automatic saving
+    # fname = 'selected_features_pred_subs'
     # plt.tight_layout( pad = 5)
     # plt.savefig(
     #     os.path.join(
