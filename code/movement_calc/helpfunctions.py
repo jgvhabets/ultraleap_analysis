@@ -1,32 +1,32 @@
+"""
+Calculating distances/angles.
+Finding minima and maxima for further feature extraction.
+Calculating speeds (not used at the moment (24/03/2023)).
+
+"""
+
 import numpy as np
 import pandas as pd
 from scipy.spatial import distance
-import matplotlib.pyplot as plt
 from scipy.signal import find_peaks
 import operator
 
 
-"""
-Fingertapping Function
-"""
-
-def calc_distances(
-    xyz_data, point1, point2,
-):
+def calc_distances(xyz_data, point1, point2):
 
     """
-    Calculates the euclidean distance between
-    two fingers.
-    EXPLAIN LIST OPTION
+    Calculates the euclidean distance between 
+    two points (point1 and point2).
 
     Input:
-        - cleaned df (DataFrame), 3D coordinates
-        of the two fingers.
+        - cleaned xyz_data (DataFrame) containing 
+        3D coordinates, points (str) of two fingers 
+        (e.g. 'index_tip', 'thumb_tip').
 
     Output:
-        - dataframe with the distance between
-        fingers and time.
+        - distances (list) between two points.
     """
+
     distances = []
 
     for i in np.arange(0, xyz_data.shape[0]):
@@ -35,23 +35,35 @@ def calc_distances(
 
             i_dist = []
             for p1 in point1:
-
                 d = dist_2_points(xyz_data, p1, point2, i)
                 i_dist.append(d)
 
             dist = np.mean(i_dist)
 
         else:
-
             dist = dist_2_points(xyz_data, point1, point2, i)
 
         distances.append(dist)
-
-
+   
     return distances
 
 
 def dist_2_points(xyz_data, point1, point2, i):
+
+    """
+    Calculates the euclidean distance between 
+    two points (str) of two fingers 
+    (e.g. 'index_tip', 'thumb_tip').
+
+    Input:
+        - cleaned xyz_data (DataFrame) containing 
+        3D coordinates, points (str) of two fingers 
+        (e.g. 'index_tip', 'thumb_tip'), i index 
+        to loop over xyz_data rows.
+
+    Output:
+        - distance dist (float) between two points.
+    """
 
     x1 = xyz_data.iloc[i][f'{point1}_x']
     y1 = xyz_data.iloc[i][f'{point1}_y']
@@ -69,13 +81,7 @@ def dist_2_points(xyz_data, point1, point2, i):
     return dist
 
 
-
-
-"""
-Pronation-Supination Function
-"""
-
-def PS_ang(df, thumb, middle, palm):
+def calc_ps_angle(df, thumb, middle, palm):
 
     """
     Calculates the angle between the normal
@@ -92,7 +98,6 @@ def PS_ang(df, thumb, middle, palm):
         in degrees.
    """
 
-    df_time_ang = df[['program_time']].copy()
     pro_sup_angle = []
 
     for i in np.arange(0, df.shape[0]):
@@ -120,8 +125,7 @@ def PS_ang(df, thumb, middle, palm):
 
         cross_vector = np.cross(vector_t, vector_m)
         vert_vector = (0, 1, 0)
-        #div = vector_vert_ax/cross
-
+     
         # Normalization of cross_vector and vert_vector
         unit_vect1 = cross_vector / np.linalg.norm(cross_vector)
         unit_vect2 = vert_vector / np.linalg.norm(vert_vector)
@@ -129,133 +133,117 @@ def PS_ang(df, thumb, middle, palm):
         dotprod = np.dot(unit_vect1, unit_vect2)
 
         pro_sup_angle.append(np.arccos(dotprod)*(180/np.pi))
-        # print(pro_sup_angle)
-    df_time_ang.insert(1, 'angle', pro_sup_angle)
-    df_time_ang = df_time_ang.reset_index(drop = True)
-    # print(df_time_ang)
-    return df_time_ang
+    
+    return pro_sup_angle
 
 
-
-"""
-Finding minima and maxima
-"""
-
-def find_min_max(distance_array, cam):
+def find_min_max(distance_array, task):
     """"
-    ...
+    Function that calculates the indexes of 
+    the minima and maxima. In order to do that,
+    it firstly calculates the minima indexes
+    using scipy integrated find_peaks() function.
+    Based on the minima indexes, np.argmax() gives 
+    the index of a maximum in betweeen two minima.
+
+    Input:
+        - distance_array (array), task (str)
+    Output:
+        - minima and maxima indexes' arrays
     """
+    # peaks_idx_max = None
+    # peaks_idx_min = None
+    if task in ['ft', 'oc', 'ps']:
 
+        peaks_idx_min, _ = find_peaks(
+            -distance_array,
+            height=np.mean(-distance_array) + 0.5*np.std(-distance_array),
+            distance= 80/4,
+            prominence=.01,
+            )
 
-    # if cam == 'vr':
+        # np.argmax() gives the index of the maximum in between two minima
+        # peaks_idx_min[i] has to be added because np.argmax is calculating 
+        # the index relative to the trace in between two minima and it has 
+        # to give the index of the maximum relative to the whole signal
+        peaks_idx_max = np.array(
+            [np.argmax(distance_array[peaks_idx_min[i]:peaks_idx_min[i+1]]) + peaks_idx_min[i] 
+             for i in range(len(peaks_idx_min)-1)]
+            )
 
-    peaks_idx_max, _ = find_peaks(
-        distance_array,
-        height=.03,  # not adding something for now
-        prominence = 0.01,  # prominence of 1 cm
-        wlen=30,  # prominence versus a window of 20 samples around the peak
-        distance=90 / 6,  # peaks are at least 1 / 6 seconds from each other
-        )
+    # elif task == 'ps':
+    #     pronation_val = [max(i, 0) for i in distance_array]
+    #     supination_val = [min(i, 0) for i in distance_array]
 
-    peaks_idx_min, _ = find_peaks(
-        -distance_array,
-        height=np.mean(-distance_array) + 0.5*np.std(-distance_array),
-        distance=90 / 5,
-        prominence=.001,
-        )
+    #     peaks_idx_min = supination_idx(supination_val)
+    #     peaks_idx_max = pronation_idx(pronation_val)
 
-    # # #     # in case none or only a few maxima and minima are detected
-    # # #     if (len(peaks_idx_max) <= 5) or (len(peaks_idx_min) <= 5):
-    # # #         peaks_idx_max, _ = find_peaks(
-    # # #             distance_array,
-    # # #             prominence=.0005,
-    # # #             wlen=90,
-    # # #             distance=90 / 5
-    # # #             )
-
-    # # #         peaks_idx_min, _ = find_peaks(
-    # # #             -distance_array,
-    # # #             prominence=.0005,
-    # # #             wlen=90,
-    # # #             distance=90 / 5
-    # # #             )
-
-    # # # elif cam == 'desktop' or cam == 'dt':
-
-    # # #     peaks_idx_max, _ = find_peaks(
-    # # #         distance_array,
-    # # #         height = np.mean(distance_array)-np.std(distance_array),
-    # # #         prominence = 0.02
-    # # #         )
-
-    # # #     peaks_idx_min, _ = find_peaks(
-    # # #         -distance_array,
-    # # #         height = np.mean(-distance_array)-np.std(-distance_array),
-    # # #         # (np.mean(-np.array(df2_dist_lh['distance']))+4*np.std(-np.array(df2_dist_lh['distance'])))),
-    # # #         prominence = 0.02
-    # # #         )
-
-    # # #     # in case none or only a few maxima and minima are detected
-    # # #     if (len(peaks_idx_max) <= 5) or (len(peaks_idx_min) <= 5):
-    # # #         print('check')
-    # # #         peaks_idx_max, _ = find_peaks(
-    # # #             distance_array,
-    # # #             prominence=.0005,
-    # # #             wlen=90,
-    # # #             distance=90 / 5
-    # # #             )
-
-    # # #         peaks_idx_min, _ = find_peaks(
-    # # #             -distance_array,
-    # # #             prominence=.0005,
-    # # #             wlen=90,
-    # # #             distance=90 / 5
-    # # #             )
-
-    # # # elif cam == 'st':
-
-    # # #     peaks_idx_max, _ = find_peaks(
-    # # #         distance_array,
-    # # #         height=.03,  # not adding something for now
-    # # #         prominence = 0.01,  # prominence of 1 cm
-    # # #         wlen=30,  # prominence versus a window of 20 samples around the peak
-    # # #         distance=90 / 6,  # peaks are at least 1 / 6 seconds from each other
-    # # #         )
-
-    # # #     peaks_idx_min, _ = find_peaks(
-    # # #         -distance_array,
-    # # #         height=np.mean(-distance_array) - 2*np.std(-distance_array),
-    # # #         distance=90 / 5,
-    # # #         prominence=.001, wlen=30,
-    # # #         )
-    # # #     # in case none or only a few maxima and minima are detected
-
-    # # #     if (len(peaks_idx_max) <= 5) or (len(peaks_idx_min) <= 5):
-    # # #         print('check')
-    # # #         peaks_idx_max, _ = find_peaks(
-    # # #             distance_array,
-    # # #             prominence=.0005,
-    # # #             wlen=90,
-    # # #             distance=90 / 5
-    # # #             )
-
-    # # #         peaks_idx_min, _ = find_peaks(
-    # # #             -distance_array,
-    # # #             prominence=.0005,
-    # # #             wlen=90,
-    # # #             distance=90 / 5
-    # # #             )
+    elif task == 'pt':
+        print(f"The specified task {task} is not yet ready to be analysed.")
 
     return peaks_idx_max, peaks_idx_min
 
 
+# def supination_idx(
+#     values = list
+# ):
 
-#### POTENTIALLY MAKE FUNCTION TO EXTRACT MINIMA IN BETWEEN MAXIMA
-# GET DISTANCE[max1 : max2]
-# GET INDEX OF LOWEST POINT (minimum) np.argmin(distance between maxima)
+#     '''
+    
+#     This function finds the indexes of local minima in supination movements.
+    
+#     '''
+
+#     zero_indices = [i for i, x in enumerate(values) if x == 0]
+
+#     sup_idx = []
+#     start = 0
+#     for i in zero_indices:
+
+#         sub_lst = values[start:i]
+#         local_min = min(sub_lst, default=None)
+
+#         if local_min is not None:
+
+#             local_min_idx = sub_lst.index(local_min) + start
+#             sup_idx.append(local_min_idx)
+
+#         start = i + 1
+
+#     return sup_idx
 
 
+# def pronation_idx(
+#     values = list
+# ):
 
+#     '''
+    
+#     This function finds the indexes of local minima in pronation movements.
+    
+#     '''
+
+
+#     zero_indices = [i for i, x in enumerate(values) if x == 0]
+
+#     pro_idx = []
+#     start = 0
+#     for i in zero_indices:
+
+#         sub_lst = values[start:i]
+#         local_max = max(sub_lst, default=None)
+
+#         if local_max is not None:
+
+#             local_max_idx = sub_lst.index(local_max) + start
+#             pro_idx.append(local_max_idx)
+
+#         start = i + 1
+
+#     return pro_idx
+
+
+############### NOT IN USE FUNCTIONS ###############
 
 """
 Finding slope changes / zeros
@@ -308,9 +296,6 @@ def speed_over_time(df_dist_time, k):
         vel = delta_dist/delta_time
 
         speed.append(abs(vel))
-
-    # dict_speed = {'speed': speed}
-    # df_speed = pd.DataFrame(dict_speed)
 
     return speed
 
@@ -365,7 +350,6 @@ def speed_OC_time_series(df_time_amp, max_idx, min_idx):
 """
 Speed per tap
 """
-
 
 def speed_tap(df_time_amp, min_idx):
 

@@ -1,6 +1,7 @@
 """
-Importing metadata for preprocessing
-ultraleap data
+Importing metadata (timestamps) 
+for preprocessing Ultraleap-data.
+
 """
 
 # Import public packages and fucntions
@@ -16,7 +17,16 @@ def load_block_timestamps(
     sub: str, task: str, side: str
 ):
     """"
-    .....
+    Function that reads timestamps excel table.
+
+    Input:
+        - file specifications: sub (str), 
+        task (str), side (str).
+
+    Output:
+        - blocktimes (DataFrame) for specified 
+        task and side.
+
     """
     # prevent incorrent side variable
     if side == 'lh': side = 'left'

@@ -46,20 +46,21 @@ def block_extraction(
     """
     Divides the cleaned data between two time points (can 
     be used in cases where all task are in the same file).
-
-    CHANGE FUNCTIONALITY FOR ONLY 1 BLOCK PRESENT
+    If to_save=True the block(s) is/are saved in .csv files.
+    If to_plot=True the raw blocks are plotted with the 
+    excel extracted timestamps.
         
-        Input:
-            - cleaned df (DataFrame),
-            time1: global_time of the start of a task, 
-            time2: global_time of the end of a task.
+    Input:
+        - cleaned df (DataFrame),
+        time1: global_time of the start of a task, 
+        time2: global_time of the end of a task.
         
-        Output:
-            - new dataframe for specific task/block.
+    Output:
+        - new dataframe for specific task/block.
     """
     # get block timestamps corresponding to data
     blocktimes = meta_info.load_block_timestamps(
-        sub=sub, task=task, side=side,)
+        sub=sub, task=task, side=side)
     
     if cam == 'desktop': cam = 'dt'
     
@@ -75,17 +76,15 @@ def block_extraction(
         try:
             # extracting ul_start and ul_end timepoints
             t = run_row[f'{block}_{time}_ul']     
-            # print(type(t))
+       
         except KeyError:
             continue
 
         if type(t) != float:
-            # print(t) 
+      
             t = t.strftime("%H:%M:%S")
             block_times[f'{block}_{time}'] = t
             new_blocks.append(block)
-
-    # plot_timestamps(df, sub, cond, cam, task, side, block_times.values())       
 
     # use set, otherwise blocknames will appear duplicated
     new_blocks = list(set(new_blocks))
@@ -101,7 +100,7 @@ def block_extraction(
         ].reset_index(drop=True)
 
         reg_block = import_dat.remove_double_and_onlyNan_rows(
-            regularize_block(blocks_dict[f'b{b_idx}'], 1000/90)
+            regularize_block(blocks_dict[f'b{b_idx}'], 1000/80)
         )
       
         # saving block dataframes as csv files
@@ -129,9 +128,8 @@ def block_extraction(
 def regularize_block(or_block, new_timedelta_ms):
 
     """
-    Function to regularize UltraLeap-data 
-    to have the same sampling frequency for 
-    the whole dataset.
+    Function to regularize UltraLeap-data to have 
+    the same sampling frequency for the whole dataset.
 
     Input:
         - cleaned block without NaNs & double rows 
@@ -189,14 +187,13 @@ def regularize_block(or_block, new_timedelta_ms):
 
 def plot_timestamps(df, sub, cond, cam, task, side, times):
 
-    """ Function that plots the raw data with the 
+    """
+    Function that plots the raw data with the 
     timestamps that are used to cut the blocks.
 
     Input:
-    - time -> block_times.values() with the ul_start and ul_end time points
+    - times -> block_times.values() with the ul_start and ul_end time points
 
-    Output:
-    -
     """
 
     glob_time_to_date_time = [datetime.strptime(df['global_time'].iloc[row], '%H:%M:%S:%f') for row in np.arange(0, df.shape[0])]

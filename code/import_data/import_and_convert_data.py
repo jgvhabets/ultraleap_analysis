@@ -1,8 +1,8 @@
 """
-Importing Handtrack-Files from Ultraleap
-version data output 01.09.2022
+Importing Handtrack-Files from Ultraleap.
+Removing duplicate and only NaN rows.
+Getting clean Ultraleap-data as DataFrames.
 
-Most recent version prior to repo-deletion
 """
 
 # Import public packages and fucntions
@@ -19,18 +19,16 @@ def import_string_data(
     removeNaNs: bool=True,
 ):
     """
-    Function to convert UltraLeap-data
-    with incorrect commas and strings
-    into DataFrame
+    Function that loads Ul-data separated by 
+    commas and converts it into DataFrame.
 
     Input:
-        - file_path (str): directory and
-            name of data file
-        - removeNaNs: defines if double- and
-            nan-rows have to be deleted,
-            defaults to True
+        - file_path (str): directory of data file
+        - removeNaNs (bool): defines if double- and
+        nan-rows have to be deleted (default=True); 
+        uses remove_double_and_onlyNan_rows(). 
     
-    Returns:
+    Output:
         - df: pd DataFrame with correct data
     """
 
@@ -62,8 +60,7 @@ def import_string_data(
             try:
                 is_pinch = int(datsplit[-5])
         
-            # if is_pinching is missing (nan) bcs
-            # hand was not recorded
+            # if is_pinching is missing (nan) because hand was not recorded
             except ValueError:
                 
                 if datsplit[-5] == 'nan':
@@ -116,38 +113,34 @@ def import_string_data(
     return df
 
 
-
 def remove_double_and_onlyNan_rows(
     df
 ):
     """
-    Removes every row which contains only
-    NaN values, or which is identical to the
-    previous row.
+    Removes every row containing only 
+    NaN values and/or duplicate rows.
     
     Input:
-        - df (DataFrame): dataframe which needs
-        to be cleaned.
+        - raw df (DataFrame) that has to be cleaned.
     
     Output:
-        - cleaned_df (DataFrame): df without rows
-        which are only-nan, or double
+        - cleaned_df (DataFrame) without only-nan 
+        and/or duplicate rows.
     """
     values = df.values  # use np-array for computational-speed
     # create list to store selection
     to_keep = [False]  # start with 1 bool because of range - 1 in for-loop
-    for i in np.arange(1, df.shape[0]):
-        # loop over every row
+    for i in np.arange(1, df.shape[0]): # loop over every row (i)
+        # if all values are nan
         if np.isnan(list(values[i, 3:])).all():
-            # if all values are nan
             to_keep.append(False)
             continue
+        # if all values are identical
         if (values[i, 3:] == values[i - 1, 3:]).all():
-            # if all values are identical
             to_keep.append(False)
 
+        # if xx% of values are identical
         elif sum(values[i, 3:] == values[i - 1, 3:]) / len(values[i, 3:]) > .8:
-            # if xx% of values are identical
             to_keep.append(False)
 
         
@@ -161,20 +154,22 @@ def remove_double_and_onlyNan_rows(
 
 
 def get_data(folder: str,
-    sub: str, task, condition, side,
-    cam_pos,
+    sub: str, task: str, condition: str, side: str,
+    cam_pos: str
 ):
     """
-    explanation of funcction
+    Function that gets the data as DataFrame 
+    without only-nan and duplicate rows.
 
-    Arguments:
-        - sub: subject code as string
+    Input:
+        - folder (str), sub (str), task (str), 
+        condition (str), side (str), cam_pos (str).
     
-    Returns:
-        - df_out
+    Output:
+        - cleaned data (DataFrame).
     
     Raises:
-        - ValueErrors if campos or side are incorrect
+        - ValueErrors if cam_pos or side are incorrect
 
     """
     if side.lower() not in ['left', 'right']:
@@ -189,13 +184,11 @@ def get_data(folder: str,
         condition=condition, side=side,
     )
 
-
     if len(pathfile) == 0: return
     
     assert os.path.exists(pathfile), (
         f'selected path does not exist {pathfile}')
     
-
     # load selected file
     data = import_string_data(pathfile)
 
